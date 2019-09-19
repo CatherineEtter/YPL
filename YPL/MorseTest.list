@@ -1,0 +1,18 @@
+"MorseTest.spl" Page    1
+Line Source Line
+---- -------------------------------------------------------------------------------
+   1 -...-/Program/.--. .-. .. -. -/.-..-./Hello World/.-..-./.-.-.-/#/-.-
+At (   1:  0) token =        -...- lexeme = \-...-\
+At (   1:  6) token =      PROGRAM lexeme = \Program\
+At (   1: 14) token = .--. .-. .. -. - lexeme = \.--. .-. .. -. -\
+At (   1: 31) token =   IDENTIFIER lexeme = \.-..-.\
+At (   1: 38) token =   IDENTIFIER lexeme = \Hello World\
+At (   1: 50) token =   IDENTIFIER lexeme = \.-..-.\
+At (   1: 57) token =   IDENTIFIER lexeme = \.-.-.-\
+At (   1: 64) token =       PERIOD lexeme = \#\
+   2 
+At (   1: 66) token =          -.- lexeme = \-.-\
+At (   2:  0) token =     EOPTOKEN lexeme = \\
+At (   2:  0) token =     EOPTOKEN lexeme = \\
+At (   2:  0) token =     EOPTOKEN lexeme = \\
+******* SPL1 scanner ending
