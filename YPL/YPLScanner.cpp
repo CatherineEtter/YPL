@@ -42,6 +42,7 @@ typedef enum
    PROGRAMTEST,
    ENDFUNC,
    ENDLINE,
+   QUOTE,
 // punctuation
    COMMA,
    PERIOD,
@@ -73,6 +74,7 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { PROGRAMTEST ,"-...-"       ,true  }, //New Paragraph
    { PRINTTEST   ,".--. .-. .. -. -"    ,true}, //PRINT
    { ENDFUNC     ,"-.-"         ,true}, //k
+   { QUOTE       ,".-..-."      ,true}, //Qoute marks ""
    { ENDLINE     ,".-.-.-"      ,true} //Full Stop
 };
 
@@ -194,7 +196,7 @@ void GetNextToken(TOKEN tokens[])
          nextCharacter = reader.GetNextCharacter().character;
 
 //    "Eat" line comment
-      if ( nextCharacter == ';' )
+      if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '~') )
       {
 
 #ifdef TRACESCANNER
@@ -208,19 +210,16 @@ void GetNextToken(TOKEN tokens[])
             nextCharacter = reader.GetNextCharacter().character;
          while ( nextCharacter != READER<CALLBACKSUSED>::EOLC );
       }
-      //Start of Catherine's Code
-
-      //End of Catherine's Code 
 
 //    "Eat" block comments (nesting allowed)
-/*
-      if ( (nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*') )
+
+      if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<') )
       {
          int depth = 0;
 
          do
          {
-            if ( (nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*') )
+            if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<') )
             {
                depth++;
 
@@ -235,7 +234,7 @@ void GetNextToken(TOKEN tokens[])
                nextCharacter = reader.GetNextCharacter().character;
                nextCharacter = reader.GetNextCharacter().character;
             }
-            else if ( (nextCharacter == '*') && (reader.GetLookAheadCharacter(1).character == '/') )
+            else if ( (nextCharacter == '>') && (reader.GetLookAheadCharacter(1).character == '>') )
             {
 
 #ifdef TRACESCANNER
@@ -259,12 +258,12 @@ void GetNextToken(TOKEN tokens[])
                                  reader.GetLookAheadCharacter(0).sourceLineIndex,
                                  "Unexpected end-of-program");
       }
-      */
+      
    } while ( (nextCharacter == '/')
           || (nextCharacter == READER<CALLBACKSUSED>::EOLC)
           || (nextCharacter == READER<CALLBACKSUSED>::TABC)
-          || (nextCharacter == ';')
-          || ((nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*')) );
+          || (nextCharacter == '<')
+          || ((nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<')) );
 //============================================================
 // Scan token
 //============================================================
