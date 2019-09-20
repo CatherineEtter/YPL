@@ -111,7 +111,7 @@ void LISTER::OpenFile(const char sourceFileName[])
    char fullFileName[80+1];
 
    strcpy(this->sourceFileName,sourceFileName);
-   strcat(this->sourceFileName,".spl"); //TODO: Switch Filename
+   strcat(this->sourceFileName,".morse"); //TODO: Switch Filename
    strcpy(fullFileName,sourceFileName);
    strcat(fullFileName,".list");
    LIST.open(fullFileName,ios::out);
@@ -240,7 +240,7 @@ void READER<CALLBACKSALLOWED>::OpenFile(const char sourceFileName[])
    char fullFileName[80+1];
 
    strcpy(fullFileName,sourceFileName);
-   strcat(fullFileName,".spl"); //TODO: Switch filename
+   strcat(fullFileName,".morse"); //TODO: Switch filename
    SOURCE.open(fullFileName,ios::in);
    if ( !SOURCE ) throw( SPLEXCEPTION("Unable to open source file") );
 

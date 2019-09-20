@@ -16,7 +16,7 @@ using namespace std;
 
 #define TRACEREADER
 
-#include "SPL.h"
+#include "YPL.h"
 
 //-----------------------------------------------------------
 int main()
@@ -49,10 +49,10 @@ int main()
    }
    catch (SPLEXCEPTION splException)
    {
-      cout << "SPL exception: " << splException.GetDescription() << endl;
+      cout << "MRSE exception: " << splException.GetDescription() << endl;
    }
-   lister.ListInformationLine("******* SPL reader ending");
-   cout << "SPL reader ending\n";
+   lister.ListInformationLine("******* MRSE reader ending");
+   cout << "MRSE reader ending\n";
 
    system("PAUSE");
    return( 0 );

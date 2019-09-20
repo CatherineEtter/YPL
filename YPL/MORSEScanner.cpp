@@ -103,8 +103,8 @@ void ProcessCompilerError(int sourceLineNumber,int sourceLineIndex,const char er
 // Use "panic mode" error recovery technique: report error message and terminate compilation!
    sprintf(information,"     At (%4d:%3d) %s",sourceLineNumber,sourceLineIndex,errorMessage);
    lister.ListInformationLine(information);
-   lister.ListInformationLine("SPL compiler ending with compiler error!\n");
-   throw( SPLEXCEPTION("SPL compiler ending with compiler error!") );
+   lister.ListInformationLine("MORSE compiler ending with compiler error!\n");
+   throw( SPLEXCEPTION("MORSE compiler ending with compiler error!") );
 }
 
 //-----------------------------------------------------------
@@ -139,10 +139,10 @@ int main()
    }
    catch (SPLEXCEPTION splException)
    {
-      cout << "SPL exception: " << splException.GetDescription() << endl;
+      cout << "MORSE exception: " << splException.GetDescription() << endl;
    }
    lister.ListInformationLine("******* SPL1 scanner ending");
-   cout << "SPL1 scanner ending\n";
+   cout << "MORSE scanner ending\n";
 
    system("PAUSE");
    return( 0 );
