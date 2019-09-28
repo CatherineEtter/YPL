@@ -22,7 +22,7 @@ using namespace std;
 //#define TRACESCANNER
 #define TRACEPARSER
 
-#include "SPL.h"
+#include "YPL.h"
 
 //-----------------------------------------------------------
 typedef enum
@@ -34,10 +34,14 @@ typedef enum
    EOPTOKEN,
    UNKTOKEN,
 // reserved words
-   PROGRAM,
+   TRANSMISSION,
    END,
    PRINT,
    ENDL,
+   FUNCTION,
+   ENDFUNC,
+   ENDLINE,
+   QUOTE,
 // punctuation
    COMMA,
    PERIOD,
@@ -50,7 +54,7 @@ struct TOKENTABLERECORD
 //-----------------------------------------------------------
 {
    TOKENTYPE type;
-   char description[12+1];
+   char description[30+1];
    bool isReservedWord;
 };
 
@@ -62,12 +66,15 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { STRING      ,"STRING"      ,false },
    { EOPTOKEN    ,"EOPTOKEN"    ,false },
    { UNKTOKEN    ,"UNKTOKEN"    ,false },
-   { PROGRAM     ,"PROGRAM"     ,true  },
+   { TRANSMISSION     ,"-... . –-. .. -."     ,true  },
    { END         ,"END"         ,true  },
-   { PRINT       ,"PRINT"       ,true  },
    { ENDL        ,"ENDL"        ,true  },
    { COMMA       ,"COMMA"       ,false },
-   { PERIOD      ,"PERIOD"      ,false }
+   { FUNCTION    ,"-...-"       ,true  }, //New Paragraph
+   { PRINT       ,".--. .-. .. -. -"    ,true}, //PRINT
+   { ENDLINE     ,"-.-"         ,true}, //k
+   { QUOTE       ,".-..-."      ,true}, //Qoute marks ""
+   { ENDFUNC     ,".-.-.-"      ,true} //Full Stop
 };
 
 //-----------------------------------------------------------
@@ -181,19 +188,19 @@ void ParseSPLProgram(TOKEN tokens[])
    void GetNextToken(TOKEN tokens[]);
    void ParsePROGRAMDefinition(TOKEN tokens[]);
 
-   EnterModule("SPLProgram");
+   EnterModule("MORSEProgram");
 
-   if ( tokens[0].type == PROGRAM )
+   if ( tokens[0].type == TRANSMISSION )
       ParsePROGRAMDefinition(tokens);
    else
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
-                           "Expecting PROGRAM");
+                           "Expecting -... . –-. .. -.");
 
-   if ( tokens[0].type != EOPTOKEN )
+   if ( tokens[0].type != EOPTOKEN ) 
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
                            "Expecting end-of-program");
 
-   ExitModule("SPLProgram");
+   ExitModule("MORSEProgram");
 }
 
 //-----------------------------------------------------------
@@ -266,7 +273,7 @@ void ParsePRINTStatement(TOKEN tokens[])
 
    if ( tokens[0].type != PERIOD )
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
-                           "Expecting '.'");
+                           "Expecting '-.-'");
 
    GetNextToken(tokens);
 
@@ -314,13 +321,13 @@ void GetNextToken(TOKEN tokens[])
    do
    {
 //    "Eat" any white-space (blanks and EOLCs and TABCs) 
-      while ( (nextCharacter == ' ')
+      while ( (nextCharacter == '/')
            || (nextCharacter == READER<CALLBACKSUSED>::EOLC)
            || (nextCharacter == READER<CALLBACKSUSED>::TABC) )
          nextCharacter = reader.GetNextCharacter().character;
 
 //    "Eat" line comment
-      if ( nextCharacter == ';' )
+      if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '~') )
       {
 
 #ifdef TRACESCANNER
@@ -333,16 +340,17 @@ void GetNextToken(TOKEN tokens[])
          do
             nextCharacter = reader.GetNextCharacter().character;
          while ( nextCharacter != READER<CALLBACKSUSED>::EOLC );
-      } 
+      }
 
 //    "Eat" block comments (nesting allowed)
-      if ( (nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*') )
+
+      if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<') )
       {
          int depth = 0;
 
          do
          {
-            if ( (nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*') )
+            if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<') )
             {
                depth++;
 
@@ -357,7 +365,7 @@ void GetNextToken(TOKEN tokens[])
                nextCharacter = reader.GetNextCharacter().character;
                nextCharacter = reader.GetNextCharacter().character;
             }
-            else if ( (nextCharacter == '*') && (reader.GetLookAheadCharacter(1).character == '/') )
+            else if ( (nextCharacter == '>') && (reader.GetLookAheadCharacter(1).character == '>') )
             {
 
 #ifdef TRACESCANNER
@@ -381,12 +389,12 @@ void GetNextToken(TOKEN tokens[])
                                  reader.GetLookAheadCharacter(0).sourceLineIndex,
                                  "Unexpected end-of-program");
       }
-   } while ( (nextCharacter == ' ')
+      
+   } while ( (nextCharacter == '/')
           || (nextCharacter == READER<CALLBACKSUSED>::EOLC)
           || (nextCharacter == READER<CALLBACKSUSED>::TABC)
-          || (nextCharacter == ';')
-          || ((nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*')) );
-
+          || (nextCharacter == '<')
+          || ((nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<')) );
 //============================================================
 // Scan token
 //============================================================
@@ -394,14 +402,14 @@ void GetNextToken(TOKEN tokens[])
    sourceLineIndex = reader.GetLookAheadCharacter(0).sourceLineIndex;
 
 // reserved words (and <identifier> ***BUT NOT YET***)
-   if ( isalpha(nextCharacter) )
+   if ( isalpha(nextCharacter) || nextCharacter == '-' || nextCharacter == '.' )
    {
       char UCLexeme[SOURCELINELENGTH+1];
 
       i = 0;
       lexeme[i++] = nextCharacter;
       nextCharacter = reader.GetNextCharacter().character;
-      while ( isalpha(nextCharacter) || isdigit(nextCharacter) || nextCharacter == '_' )
+      while ( isalpha(nextCharacter) || isdigit(nextCharacter) || nextCharacter == '_' || nextCharacter == ' ' || nextCharacter == '-' || nextCharacter == '.')
       {
          lexeme[i++] = nextCharacter;
          nextCharacter = reader.GetNextCharacter().character;
@@ -467,7 +475,7 @@ void GetNextToken(TOKEN tokens[])
             lexeme[0] = nextCharacter; lexeme[1] = '\0';
             reader.GetNextCharacter();
             break;
-         case '.': 
+         case '#': 
             type = PERIOD;
             lexeme[0] = nextCharacter; lexeme[1] = '\0';
             reader.GetNextCharacter();
