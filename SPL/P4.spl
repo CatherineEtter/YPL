@@ -1,0 +1,49 @@
+PROGRAM
+
+/*----------------------*/
+/* Arithmetic operators */
+/*----------------------*/
+   PRINT " 1 = ",1,ENDL.
+   PRINT "+2 = ",+2,ENDL.
+   PRINT "-3 = ",-3,ENDL.
+   PRINT "ABS 2 = ",ABS 2,ENDL.
+   PRINT "ABS(-3) = ",ABS(-3),ENDL.
+   PRINT "4+5 = ",(4+5),ENDL.
+   PRINT "5-4 = ",5-4,ENDL.
+   PRINT "6*7 = ",6*7,ENDL.
+   PRINT "7/4 = ",7/4,ENDL.
+   PRINT "7%4 = ",7%4,ENDL.
+   PRINT "2^3 = ",2^3,ENDL.
+   PRINT "2^(3**2) = ",2^(3**2),ENDL.
+   PRINT "(2**3)^2 = ",(2**3)^2,ENDL.
+
+/*----------------------*/
+/* Comparison operators */
+/*----------------------*/
+   PRINT "1  < 2 = ",1  < 2,ENDL.
+   PRINT "1  = 2 = ",1  = 2,ENDL.
+   PRINT "1 <= 2 = ",1 <= 2,ENDL.
+   PRINT "1  > 2 = ",1  > 2,ENDL.
+   PRINT "1 != 2 = ",1 != 2,ENDL.
+   PRINT "1 <> 2 = ",1 <> 2,ENDL.
+   PRINT "1 >= 2 = ",1 >= 2,ENDL.
+
+/*----------------------*/
+/* Logical operators    */
+/*----------------------*/
+   PRINT " true   OR  true = ", true   OR  true,ENDL.
+   PRINT " true   OR false = ", true   OR false,ENDL.
+   PRINT "false  NOR  true = ",false  NOR  true,ENDL.
+   PRINT "false  NOR false = ",false  NOR false,ENDL.
+   PRINT " true  XOR  true = ", true  XOR  true,ENDL.
+   PRINT "false  XOR false = ",false  XOR false,ENDL.
+
+   PRINT " true  AND  true = ", true  AND  true,ENDL.
+   PRINT " true  AND false = ", true  AND false,ENDL.
+   PRINT "false NAND  true = ",false NAND  true,ENDL.
+   PRINT "false NAND false = ",false NAND false,ENDL.
+
+   PRINT "NOT false = ",NOT false,ENDL.
+   PRINT "NOT  true = ",NOT  true,ENDL.
+
+END
