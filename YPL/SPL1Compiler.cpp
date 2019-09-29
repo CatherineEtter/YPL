@@ -1,11 +1,11 @@
 //-----------------------------------------------------------
 // Dr. Art Hanna
-// SPL1 Parser
+// SPL1 Compiler
 // BUGFIX  8-29-2018 (Bug found by Dhvani Patel)
 //            Added TokenDescription() function to "help" GetNextToken() instrumentation 
 //            work correctly even when the entries in TOKENTYPE enumeration are *NOT* in
 //            1-to-1 correspondence with entries in TOKENTABLE[] array.
-// SPL1Parser.cpp
+// SPL1Compiler.cpp
 //-----------------------------------------------------------
 #include <iostream>
 #include <iomanip>
@@ -20,9 +20,10 @@ using namespace std;
 
 //#define TRACEREADER
 //#define TRACESCANNER
-#define TRACEPARSER
+//#define TRACEPARSER
+#define TRACECOMPILER
 
-#include "YPL.h"
+#include "SPL.h"
 
 //-----------------------------------------------------------
 typedef enum
@@ -34,14 +35,10 @@ typedef enum
    EOPTOKEN,
    UNKTOKEN,
 // reserved words
-   TRANSMISSION,
+   PROGRAM,
    END,
    PRINT,
    ENDL,
-   FUNCTION,
-   ENDFUNC,
-   ENDLINE,
-   QUOTE,
 // punctuation
    COMMA,
    PERIOD,
@@ -54,7 +51,7 @@ struct TOKENTABLERECORD
 //-----------------------------------------------------------
 {
    TOKENTYPE type;
-   char description[30+1];
+   char description[12+1];
    bool isReservedWord;
 };
 
@@ -66,16 +63,12 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { STRING      ,"STRING"      ,false },
    { EOPTOKEN    ,"EOPTOKEN"    ,false },
    { UNKTOKEN    ,"UNKTOKEN"    ,false },
-   { TRANSMISSION     ,"-... . --. .. -."     ,true  },
+   { PROGRAM     ,"PROGRAM"     ,true  },
    { END         ,"END"         ,true  },
+   { PRINT       ,"PRINT"       ,true  },
    { ENDL        ,"ENDL"        ,true  },
    { COMMA       ,"COMMA"       ,false },
-   { FUNCTION    ,"-...-"       ,true  }, //New Paragraph
-   { PRINT       ,".--. .-. .. -. -"    ,true}, //PRINT
-   { ENDLINE     ,"-.-"         ,true}, //k
-   { QUOTE       ,".-..-."      ,true}, //Qoute marks ""
-   { COMMA       ,"--..--"      ,true}, //Comma ,
-   { ENDFUNC     ,".-.-.-"      ,true} //Full Stop
+   { PERIOD      ,"PERIOD"      ,false }
 };
 
 //-----------------------------------------------------------
@@ -93,6 +86,7 @@ struct TOKEN
 //--------------------------------------------------
 READER<CALLBACKSUSED> reader(SOURCELINELENGTH,LOOKAHEAD);
 LISTER lister(LINESPERPAGE);
+CODE code;
 
 #ifdef TRACEPARSER
 int level;
@@ -133,8 +127,8 @@ void ProcessCompilerError(int sourceLineNumber,int sourceLineIndex,const char er
 // Use "panic mode" error recovery technique: report error message and terminate compilation!
    sprintf(information,"     At (%4d:%3d) %s",sourceLineNumber,sourceLineIndex,errorMessage);
    lister.ListInformationLine(information);
-   lister.ListInformationLine("SPL compiler ending with compiler error!\n");
-   throw( SPLEXCEPTION("SPL compiler ending with compiler error!") );
+   lister.ListInformationLine("SPL1 compiler ending with compiler error!\n");
+   throw( SPLEXCEPTION("SPL1 compiler ending with compiler error!") );
 }
 
 //-----------------------------------------------------------
@@ -149,12 +143,17 @@ int main()
    char sourceFileName[80+1];
    TOKEN tokens[LOOKAHEAD+1];
    
-   cout << "Source filename? ";
-   cin >> sourceFileName;
+   cout << "Source filename? "; cin >> sourceFileName;
 
    try
    {
       lister.OpenFile(sourceFileName);
+      code.OpenFile(sourceFileName);
+
+// CODEGENERATION
+      code.EmitBeginningCode(sourceFileName);
+// ENDCODEGENERATION
+
       reader.SetLister(&lister);
       reader.AddCallbackFunction(Callback1);
       reader.AddCallbackFunction(Callback2);
@@ -169,17 +168,21 @@ int main()
 #endif
    
       ParseSPLProgram(tokens);
+
+// CODEGENERATION
+      code.EmitEndingCode();
+// ENDCODEGENERATION
+
    }
    catch (SPLEXCEPTION splException)
    {
       cout << "SPL exception: " << splException.GetDescription() << endl;
    }
-   lister.ListInformationLine("******* SPL1 parser ending");
-   cout << "SPL1 parser ending\n";
+   lister.ListInformationLine("******* SPL1 compiler ending");
+   cout << "SPL1 compiler ending\n";
 
    system("PAUSE");
    return( 0 );
-   
 }
 
 //-----------------------------------------------------------
@@ -189,65 +192,81 @@ void ParseSPLProgram(TOKEN tokens[])
    void GetNextToken(TOKEN tokens[]);
    void ParsePROGRAMDefinition(TOKEN tokens[]);
 
-   EnterModule("MORSEProgram");
+   EnterModule("SPLProgram");
 
-   if ( tokens[0].type == TRANSMISSION )
+   if ( tokens[0].type == PROGRAM )
       ParsePROGRAMDefinition(tokens);
    else
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
-                           "Expecting -... . –-. .. -.");
+                           "Expecting PROGRAM");
 
-   if ( tokens[0].type != EOPTOKEN ) 
+   if ( tokens[0].type != EOPTOKEN )
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
                            "Expecting end-of-program");
 
-   ExitModule("MORSEProgram");
+   ExitModule("SPLProgram");
 }
 
-void ParsePROGRAMDefinition(TOKEN tokens[]) {
+//-----------------------------------------------------------
+void ParsePROGRAMDefinition(TOKEN tokens[])
+//-----------------------------------------------------------
+{
    void GetNextToken(TOKEN tokens[]);
    void ParseStatement(TOKEN tokens[]);
-   void ParseFUNCTIONDefinition(TOKEN tokens[]);
+
+   char line[SOURCELINELENGTH+1];
+   char label[SOURCELINELENGTH+1];
+   char reference[SOURCELINELENGTH+1];
 
    EnterModule("PROGRAMDefinition");
 
+// CODEGENERATION
+   code.EmitUnformattedLine("; **** =========");
+   sprintf(line,"; **** PROGRAM module (%4d)",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
+   code.EmitUnformattedLine("; **** =========");
+   code.EmitFormattedLine("PROGRAMMAIN","EQU"  ,"*");
+
+   code.EmitFormattedLine("","PUSH" ,"#RUNTIMESTACK","set SP");
+   code.EmitFormattedLine("","POPSP");
+   code.EmitFormattedLine("","PUSHA","STATICDATA","set SB");
+   code.EmitFormattedLine("","POPSB");
+   code.EmitFormattedLine("","PUSH","#HEAPBASE","initialize heap");
+   code.EmitFormattedLine("","PUSH","#HEAPSIZE");
+   code.EmitFormattedLine("","SVC","#SVC_INITIALIZE_HEAP");
+   sprintf(label,"PROGRAMBODY%04d",code.LabelSuffix());
+   code.EmitFormattedLine("","CALL",label);
+   code.AddDSToStaticData("Normal program termination","",reference);
+   code.EmitFormattedLine("","PUSHA",reference);
+   code.EmitFormattedLine("","SVC","#SVC_WRITE_STRING");
+   code.EmitFormattedLine("","SVC","#SVC_WRITE_ENDL");
+   code.EmitFormattedLine("","PUSH","#0D0","terminate with status = 0");
+   code.EmitFormattedLine("","SVC" ,"#SVC_TERMINATE");
+   code.EmitUnformattedLine("");
+   code.EmitFormattedLine(label,"EQU","*");
+// ENDCODEGENERATION
+
    GetNextToken(tokens);
+   while ( tokens[0].type != END )
+      ParseStatement(tokens);
 
-   if(tokens[0].type == FUNCTION) {
-      ParseFUNCTIONDefinition(tokens);
-   } else {
-      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting Function");
-   }
-   /*while ( tokens[0].type != END )
-      ParseStatement(tokens);*/
+// CODEGENERATION
+   code.EmitFormattedLine("","RETURN");
+   code.EmitUnformattedLine("; **** =========");
+   sprintf(line,"; **** END (%4d)",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
+   code.EmitUnformattedLine("; **** =========");
+// ENDCODEGENERATION
 
-   if(tokens[0].type != EOPTOKEN) {
-      GetNextToken(tokens);
-   }
+   GetNextToken(tokens);
 
    ExitModule("PROGRAMDefinition");
 }
 
-void ParseFUNCTIONDefinition(TOKEN tokens[]) {
-   void GetNextToken(TOKEN tokens[]);
-   void ParseStatement(TOKEN tokens[]);
-
-   EnterModule("FUNCTIONDefinition");
-
-   GetNextToken(tokens);
-   if(tokens[0].type != IDENTIFIER) {
-      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting Identifier");
-   }
-   GetNextToken(tokens);
-   while(tokens[0].type != ENDFUNC) {
-      ParseStatement(tokens);
-   }
-   GetNextToken(tokens);
-
-   ExitModule("FUNCTIONDefinition");
-}
-
-void ParseStatement(TOKEN tokens[]) {
+//-----------------------------------------------------------
+void ParseStatement(TOKEN tokens[])
+//-----------------------------------------------------------
+{
    void GetNextToken(TOKEN tokens[]);
    void ParsePRINTStatement(TOKEN tokens[]);
 
@@ -267,10 +286,18 @@ void ParseStatement(TOKEN tokens[]) {
    ExitModule("Statement");
 }
 
-void ParsePRINTStatement(TOKEN tokens[]) {
+//-----------------------------------------------------------
+void ParsePRINTStatement(TOKEN tokens[])
+//-----------------------------------------------------------
+{
    void GetNextToken(TOKEN tokens[]);
 
+   char line[SOURCELINELENGTH+1];
+
    EnterModule("PRINTStatement");
+
+   sprintf(line,"; **** PRINT statement (%4d)",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
 
    do
    {
@@ -278,13 +305,24 @@ void ParsePRINTStatement(TOKEN tokens[]) {
 
       switch ( tokens[0].type )
       {
-         case QUOTE:
-            GetNextToken(tokens);
-            break;
          case STRING:
+
+// CODEGENERATION
+            char reference[SOURCELINELENGTH+1];
+
+            code.AddDSToStaticData(tokens[0].lexeme,"",reference);
+            code.EmitFormattedLine("","PUSHA",reference);
+            code.EmitFormattedLine("","SVC","#SVC_WRITE_STRING");
+// ENDCODEGENERATION
+
             GetNextToken(tokens);
             break;
          case ENDL:
+
+// CODEGENERATION
+            code.EmitFormattedLine("","SVC","#SVC_WRITE_ENDL");
+// ENDCODEGENERATION
+
             GetNextToken(tokens);
             break;
          default:
@@ -292,9 +330,10 @@ void ParsePRINTStatement(TOKEN tokens[]) {
                                  "Expecting string or ENDL");
       }
    } while ( tokens[0].type == COMMA );
-   if ( tokens[0].type != ENDLINE )
+
+   if ( tokens[0].type != PERIOD )
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
-                           "Expecting '-.-'");
+                           "Expecting '.'");
 
    GetNextToken(tokens);
 
@@ -305,14 +344,19 @@ void ParsePRINTStatement(TOKEN tokens[]) {
 void Callback1(int sourceLineNumber,const char sourceLine[])
 //-----------------------------------------------------------
 {
-   cout << setw(4) << sourceLineNumber << " ";
+   cout << setw(4) << sourceLineNumber << " " << sourceLine << endl;
 }
 
 //-----------------------------------------------------------
 void Callback2(int sourceLineNumber,const char sourceLine[])
 //-----------------------------------------------------------
 {
-    cout << sourceLine << endl;
+   char line[SOURCELINELENGTH+1];
+
+// CODEGENERATION
+   sprintf(line,"; %4d %s",sourceLineNumber,sourceLine);
+   code.EmitUnformattedLine(line);
+// ENDCODEGENERATION
 }
 
 //-----------------------------------------------------------
@@ -342,13 +386,13 @@ void GetNextToken(TOKEN tokens[])
    do
    {
 //    "Eat" any white-space (blanks and EOLCs and TABCs) 
-      while ( (nextCharacter == '/')
+      while ( (nextCharacter == ' ')
            || (nextCharacter == READER<CALLBACKSUSED>::EOLC)
            || (nextCharacter == READER<CALLBACKSUSED>::TABC) )
          nextCharacter = reader.GetNextCharacter().character;
 
 //    "Eat" line comment
-      if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '~') )
+      if ( nextCharacter == ';' )
       {
 
 #ifdef TRACESCANNER
@@ -364,14 +408,13 @@ void GetNextToken(TOKEN tokens[])
       }
 
 //    "Eat" block comments (nesting allowed)
-
-      if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<') )
+      if ( (nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*') )
       {
          int depth = 0;
 
          do
          {
-            if ( (nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<') )
+            if ( (nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*') )
             {
                depth++;
 
@@ -386,7 +429,7 @@ void GetNextToken(TOKEN tokens[])
                nextCharacter = reader.GetNextCharacter().character;
                nextCharacter = reader.GetNextCharacter().character;
             }
-            else if ( (nextCharacter == '>') && (reader.GetLookAheadCharacter(1).character == '>') )
+            else if ( (nextCharacter == '*') && (reader.GetLookAheadCharacter(1).character == '/') )
             {
 
 #ifdef TRACESCANNER
@@ -410,27 +453,27 @@ void GetNextToken(TOKEN tokens[])
                                  reader.GetLookAheadCharacter(0).sourceLineIndex,
                                  "Unexpected end-of-program");
       }
-      
-   } while ( (nextCharacter == '/')
+   } while ( (nextCharacter == ' ')
           || (nextCharacter == READER<CALLBACKSUSED>::EOLC)
           || (nextCharacter == READER<CALLBACKSUSED>::TABC)
-          || (nextCharacter == '<')
-          || ((nextCharacter == '<') && (reader.GetLookAheadCharacter(1).character == '<')) );
+          || (nextCharacter == ';')
+          || ((nextCharacter == '/') && (reader.GetLookAheadCharacter(1).character == '*')) );
+
 //============================================================
 // Scan token
 //============================================================
    sourceLineNumber = reader.GetLookAheadCharacter(0).sourceLineNumber;
    sourceLineIndex = reader.GetLookAheadCharacter(0).sourceLineIndex;
 
-// reserved words (and <identifier> ***BUT NOT YET***)
-   if ( isalpha(nextCharacter) || nextCharacter == '-' || nextCharacter == '.' )
+// reserved word (or <identifier> ***BUT NOT YET***)
+   if ( isalpha(nextCharacter) )
    {
       char UCLexeme[SOURCELINELENGTH+1];
 
       i = 0;
       lexeme[i++] = nextCharacter;
       nextCharacter = reader.GetNextCharacter().character;
-      while ( isalpha(nextCharacter) || isdigit(nextCharacter) || nextCharacter == '_' || nextCharacter == ' ' || nextCharacter == '-' || nextCharacter == '.')
+      while ( isalpha(nextCharacter) || isdigit(nextCharacter) || (nextCharacter == '_') )
       {
          lexeme[i++] = nextCharacter;
          nextCharacter = reader.GetNextCharacter().character;
@@ -459,10 +502,10 @@ void GetNextToken(TOKEN tokens[])
       switch ( nextCharacter )
       {
 // <string>
-         case '*': 
+         case '"': 
             i = 0;
             nextCharacter = reader.GetNextCharacter().character;
-            while ( nextCharacter != '*' )
+            while ( nextCharacter != '"' )
             {
                if ( nextCharacter == '\\' )
                   nextCharacter = reader.GetNextCharacter().character;
@@ -496,7 +539,7 @@ void GetNextToken(TOKEN tokens[])
             lexeme[0] = nextCharacter; lexeme[1] = '\0';
             reader.GetNextCharacter();
             break;
-         case '#': 
+         case '.': 
             type = PERIOD;
             lexeme[0] = nextCharacter; lexeme[1] = '\0';
             reader.GetNextCharacter();

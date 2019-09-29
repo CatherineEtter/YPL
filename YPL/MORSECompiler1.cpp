@@ -20,7 +20,8 @@ using namespace std;
 
 //#define TRACEREADER
 //#define TRACESCANNER
-#define TRACEPARSER
+//#define TRACEPARSER
+#define TRACECOMPILER
 
 #include "YPL.h"
 
@@ -93,6 +94,7 @@ struct TOKEN
 //--------------------------------------------------
 READER<CALLBACKSUSED> reader(SOURCELINELENGTH,LOOKAHEAD);
 LISTER lister(LINESPERPAGE);
+CODE code;
 
 #ifdef TRACEPARSER
 int level;
@@ -155,6 +157,12 @@ int main()
    try
    {
       lister.OpenFile(sourceFileName);
+      code.OpenFile(sourceFileName);
+
+      // CODEGENERATION
+      code.EmitBeginningCode(sourceFileName);
+      // ENDCODEGENERATION
+
       reader.SetLister(&lister);
       reader.AddCallbackFunction(Callback1);
       reader.AddCallbackFunction(Callback2);
@@ -169,6 +177,9 @@ int main()
 #endif
    
       ParseSPLProgram(tokens);
+      // CODEGENERATION
+      code.EmitEndingCode();
+      // ENDCODEGENERATION
    }
    catch (SPLEXCEPTION splException)
    {
@@ -209,7 +220,37 @@ void ParsePROGRAMDefinition(TOKEN tokens[]) {
    void ParseStatement(TOKEN tokens[]);
    void ParseFUNCTIONDefinition(TOKEN tokens[]);
 
+   char line[SOURCELINELENGTH+1];
+   char label[SOURCELINELENGTH+1];
+   char reference[SOURCELINELENGTH+1];
+
    EnterModule("PROGRAMDefinition");
+
+   // CODEGENERATION
+   code.EmitUnformattedLine("; **** =========");
+   sprintf(line,"; **** PROGRAM module (%4d)",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
+   code.EmitUnformattedLine("; **** =========");
+   code.EmitFormattedLine("PROGRAMMAIN","EQU"  ,"*");
+
+   code.EmitFormattedLine("","PUSH" ,"#RUNTIMESTACK","set SP");
+   code.EmitFormattedLine("","POPSP");
+   code.EmitFormattedLine("","PUSHA","STATICDATA","set SB");
+   code.EmitFormattedLine("","POPSB");
+   code.EmitFormattedLine("","PUSH","#HEAPBASE","initialize heap");
+   code.EmitFormattedLine("","PUSH","#HEAPSIZE");
+   code.EmitFormattedLine("","SVC","#SVC_INITIALIZE_HEAP");
+   sprintf(label,"PROGRAMBODY%04d",code.LabelSuffix());
+   code.EmitFormattedLine("","CALL",label);
+   code.AddDSToStaticData("Normal program termination","",reference);
+   code.EmitFormattedLine("","PUSHA",reference);
+   code.EmitFormattedLine("","SVC","#SVC_WRITE_STRING");
+   code.EmitFormattedLine("","SVC","#SVC_WRITE_ENDL");
+   code.EmitFormattedLine("","PUSH","#0D0","terminate with status = 0");
+   code.EmitFormattedLine("","SVC" ,"#SVC_TERMINATE");
+   code.EmitUnformattedLine("");
+   code.EmitFormattedLine(label,"EQU","*");
+   // ENDCODEGENERATION
 
    GetNextToken(tokens);
 
@@ -224,6 +265,14 @@ void ParsePROGRAMDefinition(TOKEN tokens[]) {
    if(tokens[0].type != EOPTOKEN) {
       GetNextToken(tokens);
    }
+
+   // CODEGENERATION
+   code.EmitFormattedLine("","RETURN");
+   code.EmitUnformattedLine("; **** =========");
+   sprintf(line,"; **** END (%4d)",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
+   code.EmitUnformattedLine("; **** =========");
+   // ENDCODEGENERATION
 
    ExitModule("PROGRAMDefinition");
 }
@@ -282,6 +331,13 @@ void ParsePRINTStatement(TOKEN tokens[]) {
             GetNextToken(tokens);
             break;
          case STRING:
+            // CODEGENERATION
+            char reference[SOURCELINELENGTH+1];
+
+            code.AddDSToStaticData(tokens[0].lexeme,"",reference);
+            code.EmitFormattedLine("","PUSHA",reference);
+            code.EmitFormattedLine("","SVC","#SVC_WRITE_STRING");
+            // ENDCODEGENERATION
             GetNextToken(tokens);
             break;
          case ENDL:
@@ -312,7 +368,12 @@ void Callback1(int sourceLineNumber,const char sourceLine[])
 void Callback2(int sourceLineNumber,const char sourceLine[])
 //-----------------------------------------------------------
 {
-    cout << sourceLine << endl;
+    //cout << sourceLine << endl;
+    char line[SOURCELINELENGTH+1];
+    // CODEGENERATION
+    sprintf(line,"; %4d %s",sourceLineNumber,sourceLine);
+    code.EmitUnformattedLine(line);
+   // ENDCODEGENERATION
 }
 
 //-----------------------------------------------------------
