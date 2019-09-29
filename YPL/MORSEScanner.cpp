@@ -34,12 +34,11 @@ typedef enum
    EOPTOKEN,
    UNKTOKEN,
 // reserved words
-   PROGRAM,
+   TRANSMISSION,
    END,
    PRINT,
    ENDL,
-   PRINTTEST,
-   PROGRAMTEST,
+   FUNCTION,
    ENDFUNC,
    ENDLINE,
    QUOTE,
@@ -67,15 +66,15 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { STRING      ,"STRING"      ,false },
    { EOPTOKEN    ,"EOPTOKEN"    ,false },
    { UNKTOKEN    ,"UNKTOKEN"    ,false },
-   { PROGRAM     ,"PROGRAM"     ,true  },
+   { TRANSMISSION     ,"-... . --. .. -."     ,true  },
    { END         ,"END"         ,true  },
    { ENDL        ,"ENDL"        ,true  },
    { COMMA       ,"COMMA"       ,false },
-   { PROGRAMTEST ,"-...-"       ,true  }, //New Paragraph
-   { PRINTTEST   ,".--. .-. .. -. -"    ,true}, //PRINT
-   { ENDFUNC     ,"-.-"         ,true}, //k
+   { FUNCTION    ,"-...-"       ,true  }, //New Paragraph
+   { PRINT       ,".--. .-. .. -. -"    ,true}, //PRINT
+   { ENDLINE     ,"-.-"         ,true}, //k
    { QUOTE       ,".-..-."      ,true}, //Qoute marks ""
-   { ENDLINE     ,".-.-.-"      ,true} //Full Stop
+   { ENDFUNC     ,".-.-.-"      ,true} //Full Stop
 };
 
 //-----------------------------------------------------------
@@ -307,10 +306,10 @@ void GetNextToken(TOKEN tokens[])
       switch ( nextCharacter )
       {
 // <string>
-         case '"': 
+         case '*': 
             i = 0;
             nextCharacter = reader.GetNextCharacter().character;
-            while ( nextCharacter != '"' )
+            while ( nextCharacter != '*' )
             {
                if ( nextCharacter == '\\' )
                   nextCharacter = reader.GetNextCharacter().character;

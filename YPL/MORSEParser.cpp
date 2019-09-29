@@ -66,7 +66,7 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { STRING      ,"STRING"      ,false },
    { EOPTOKEN    ,"EOPTOKEN"    ,false },
    { UNKTOKEN    ,"UNKTOKEN"    ,false },
-   { TRANSMISSION     ,"-... . –-. .. -."     ,true  },
+   { TRANSMISSION     ,"-... . --. .. -."     ,true  },
    { END         ,"END"         ,true  },
    { ENDL        ,"ENDL"        ,true  },
    { COMMA       ,"COMMA"       ,false },
@@ -74,6 +74,7 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { PRINT       ,".--. .-. .. -. -"    ,true}, //PRINT
    { ENDLINE     ,"-.-"         ,true}, //k
    { QUOTE       ,".-..-."      ,true}, //Qoute marks ""
+   { COMMA       ,"--..--"      ,true}, //Comma ,
    { ENDFUNC     ,".-.-.-"      ,true} //Full Stop
 };
 
@@ -203,29 +204,50 @@ void ParseSPLProgram(TOKEN tokens[])
    ExitModule("MORSEProgram");
 }
 
-//-----------------------------------------------------------
-void ParsePROGRAMDefinition(TOKEN tokens[])
-//-----------------------------------------------------------
-{
+void ParsePROGRAMDefinition(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
    void ParseStatement(TOKEN tokens[]);
+   void ParseFUNCTIONDefinition(TOKEN tokens[]);
 
    EnterModule("PROGRAMDefinition");
 
    GetNextToken(tokens);
 
-   while ( tokens[0].type != END )
-      ParseStatement(tokens);
+   if(tokens[0].type == FUNCTION) {
+      ParseFUNCTIONDefinition(tokens);
+   } else {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting Function");
+   }
+   /*while ( tokens[0].type != END )
+      ParseStatement(tokens);*/
 
-   GetNextToken(tokens);
+   if(tokens[0].type != EOPTOKEN) {
+      GetNextToken(tokens);
+   }
 
    ExitModule("PROGRAMDefinition");
 }
 
-//-----------------------------------------------------------
-void ParseStatement(TOKEN tokens[])
-//-----------------------------------------------------------
-{
+void ParseFUNCTIONDefinition(TOKEN tokens[]) {
+   void GetNextToken(TOKEN tokens[]);
+   void ParseStatement(TOKEN tokens[]);
+
+   EnterModule("FUNCTIONDefinition");
+
+   GetNextToken(tokens);
+   if(tokens[0].type != IDENTIFIER) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting Identifier");
+   }
+   GetNextToken(tokens);
+   while(tokens[0].type != ENDFUNC) {
+      ParseStatement(tokens);
+   }
+   GetNextToken(tokens);
+
+   ExitModule("FUNCTIONDefinition");
+}
+
+void ParseStatement(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
    void ParsePRINTStatement(TOKEN tokens[]);
 
@@ -245,10 +267,7 @@ void ParseStatement(TOKEN tokens[])
    ExitModule("Statement");
 }
 
-//-----------------------------------------------------------
-void ParsePRINTStatement(TOKEN tokens[])
-//-----------------------------------------------------------
-{
+void ParsePRINTStatement(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
 
    EnterModule("PRINTStatement");
@@ -259,6 +278,9 @@ void ParsePRINTStatement(TOKEN tokens[])
 
       switch ( tokens[0].type )
       {
+         case QUOTE:
+            GetNextToken(tokens);
+            break;
          case STRING:
             GetNextToken(tokens);
             break;
@@ -270,8 +292,7 @@ void ParsePRINTStatement(TOKEN tokens[])
                                  "Expecting string or ENDL");
       }
    } while ( tokens[0].type == COMMA );
-
-   if ( tokens[0].type != PERIOD )
+   if ( tokens[0].type != ENDLINE )
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
                            "Expecting '-.-'");
 
@@ -438,10 +459,10 @@ void GetNextToken(TOKEN tokens[])
       switch ( nextCharacter )
       {
 // <string>
-         case '"': 
+         case '*': 
             i = 0;
             nextCharacter = reader.GetNextCharacter().character;
-            while ( nextCharacter != '"' )
+            while ( nextCharacter != '*' )
             {
                if ( nextCharacter == '\\' )
                   nextCharacter = reader.GetNextCharacter().character;
