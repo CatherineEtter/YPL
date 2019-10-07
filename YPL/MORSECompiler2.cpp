@@ -107,10 +107,10 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { LESSTHANEQUAL    ,".-.. - -...-"       ,true},
    { GREATERTHAN      ,"--. -"              ,true},
    { GREATERTHANEQUAL ,"--. - -...-"        ,true},
-   { EQUAL            ,"-...-"              ,true},
+   { EQUAL            ,"-...- -...-"        ,true},
    { NOTEQUAL         ,"-. -...-"           ,true},
    { PLUS             ,".-.-."              ,true}, // +
-   { MINUS            ,"-....- "            ,true}, // -
+   { MINUS            ,"-....-"            ,true}, // -
    { MULIPLY          ,"--"                 ,true}, // M
    { DIVIDE           ,"-.."                ,true}, // D
    { ENDFUNC          ,".-.-.-"             ,true} //Full Stop
