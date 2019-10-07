@@ -43,6 +43,7 @@ typedef enum
    FUNCTION,
    ENDFUNC,
    ENDLINE,
+   NEWLINE,
    QUOTE,
    TRUE,
    FALSE,
@@ -92,7 +93,8 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { FUNCTION         ,"..-. ..- -. -.-."   ,true}, //FUNC
    { PRINT            ,".--. .-. .. -. -"   ,true}, //PRINT
    { ENDLINE          ,"-.-"                ,true}, //k
-   { QUOTE            ,".-..-."             ,true}, //Qoute marks ""
+   { NEWLINE          ,"-. .-.."            ,true}, //N L
+   { QUOTE            ,".-..-."             ,true}, //Quote marks ""
    { COMMA            ,"--..--"             ,true}, //Comma ,
    { OR               ,"--- .-."            ,true},
    { AND              ,".- -. -.."          ,true},
@@ -220,8 +222,8 @@ int main()
    {
       cout << "SPL exception: " << splException.GetDescription() << endl;
    }
-   lister.ListInformationLine("******* SPL1 parser ending");
-   cout << "SPL1 parser ending\n";
+   lister.ListInformationLine("******* SPL2 Compiler ending");
+   cout << "SPL2 compiler ending\n";
 
    system("PAUSE");
    return( 0 );
@@ -385,9 +387,27 @@ void ParsePRINTStatement(TOKEN tokens[]) {
          /*case ENDL:
             GetNextToken(tokens);
             break;*/
+         case NEWLINE:
+            // CODEGENERATION
+            code.EmitFormattedLine("","SVC","#SVC_WRITE_ENDL");
+            // ENDCODEGENERATION
+
+            GetNextToken(tokens);
+            break;
          default:
          {
-            //ParseExpression(tokens,datatype);
+            ParseExpression(tokens,datatype);
+            // CODEGENERATION
+            switch (datatype)
+            {
+               case INTEGERTYPE:
+                  code.EmitFormattedLine("","SVC","#SVC_WRITE_INTEGER");
+                  break;
+               case BOOLEANTYPE:
+                  code.EmitFormattedLine("","SVC","#SVC_WRITE_BOOLEAN");
+                  break;
+            }
+            // ENDCODEGENERATION
          }
       }
    } while ( tokens[0].type == COMMA );
@@ -875,6 +895,19 @@ void GetNextToken(TOKEN tokens[])
          type = TOKENTABLE[i].type;
       else
          type = IDENTIFIER;
+   }
+   else if(isdigit(nextCharacter)) 
+   {
+      i = 0;
+      lexeme[i++] = nextCharacter;
+      nextCharacter = reader.GetNextCharacter().character;
+      while ( isdigit(nextCharacter) )
+      {
+         lexeme[i++] = nextCharacter;
+         nextCharacter = reader.GetNextCharacter().character;
+      }
+      lexeme[i] = '\0';
+      type = INTEGER;
    }
    else
    {
