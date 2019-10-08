@@ -1,6 +1,6 @@
 //-----------------------------------------------------------
 // Catherine Etter
-// Adapted from SPL2Compiler.cpp
+// Adapted from SPL3Compiler.cpp
 //-----------------------------------------------------------
 #include <iostream>
 #include <iomanip>
@@ -42,6 +42,12 @@ typedef enum
    QUOTE,
    TRUE,
    FALSE,
+   INTDATATYPE,
+   DOUBLEDATATYPE,
+   STRINGDATATYPE,
+   BOOLDATATYPE,
+   CHARDATATYPE,
+   INPUT,
    OR,
    AND,
    NOT,
@@ -98,6 +104,12 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { CPARENTHESIS     ,"-.--.-"             ,true}, // Parenthesis )
    { TRUE             ,"- .-. ..- ."        ,true}, // TRUE
    { FALSE            ,"..-. .- .-.. ... ." ,true}, //FALSE
+   { INTDATATYPE      ,".. -. -"            ,true}, //INT
+   { DOUBLEDATATYPE   ,"-.. -... .-.."      ,true}, //DBL
+   { STRINGDATATYPE   ,"... - .-."          ,true}, //STRING
+   { BOOLDATATYPE     ,"-... --- --- .-.."  ,true}, //BOOL
+   { CHARDATATYPE     ,"-.-. .... .-."      ,true}, //CHR
+   { INPUT            ,".. -. .--. ..- -"   ,true}, //INPUT
    { LESSTHAN         ,".-.. -"             ,true},
    { LESSTHANEQUAL    ,".-.. - -...-"       ,true},
    { GREATERTHAN      ,"--. -"              ,true},
@@ -127,6 +139,7 @@ struct TOKEN
 READER<CALLBACKSUSED> reader(SOURCELINELENGTH,LOOKAHEAD);
 LISTER lister(LINESPERPAGE);
 CODE code;
+IDENTIFIERTABLE identifierTable(&lister,MAXIMUMIDENTIFIERS);
 
 #ifdef TRACEPARSER
 int level;
@@ -308,6 +321,61 @@ void ParsePROGRAMDefinition(TOKEN tokens[]) {
 
    ExitModule("PROGRAMDefinition");
 }
+void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
+   void GetNextToken(TOKEN tokens[]);
+
+   EnterModule("DataDefinitions");
+
+   while( (tokens[0].type == INTDATATYPE) || (tokens[0].type == DOUBLEDATATYPE) || (tokens[0].type == STRINGDATATYPE) || (tokens[0].type == BOOLDATATYPE) || (tokens[0].type == CHARDATATYPE)) {
+      
+      char identifier[MAXIMUMLENGTHIDENTIFIER+1];
+      char reference[MAXIMUMLENGTHIDENTIFIER+1];
+      DATATYPE datatype;
+      bool isInTable;
+      int index;
+
+      do {
+         switch(tokens[0].type) {
+         case INTDATATYPE:
+            datatype = INTEGERTYPE;
+            break;
+         case BOOLDATATYPE:
+            datatype = BOOLEANTYPE;
+            break;
+         default:
+            ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting INT or BOOL");
+         }
+         GetNextToken(tokens);
+
+         index = identifierTable.GetIndex(identifier,isInTable);
+         if ( isInTable && identifierTable.IsInCurrentScope(index) ) {
+            ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Multiply-defined identifier");
+         }
+
+         switch(identifierScope) {
+            case GLOBALSCOPE:
+            // CODEGENERATION
+               code.AddRWToStaticData(1,identifier,reference);
+            // ENDCODEGENERATION
+               identifierTable.AddToTable(identifier,GLOBAL_VARIABLE,datatype,reference);
+               break;
+            case PROGRAMMODULESCOPE:
+            // CODEGENERATION
+               code.AddRWToStaticData(1,identifier,reference);
+            // ENDCODEGENERATION
+               identifierTable.AddToTable(identifier,PROGRAMMODULE_VARIABLE,datatype,reference);
+               break;
+         }
+      } while (tokens[0].type == COMMA);
+
+      if(tokens[0].type != ENDLINE) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.-'");
+      }
+      GetNextToken(tokens);
+   }
+
+   ExitModule("DataDefinitions");
+}
 
 void ParseFUNCTIONDefinition(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
@@ -331,6 +399,7 @@ void ParseFUNCTIONDefinition(TOKEN tokens[]) {
 void ParseStatement(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
    void ParsePRINTStatement(TOKEN tokens[]);
+   void ParseINPUTStatement(TOKEN tokens[]);
 
    EnterModule("Statement");
 
@@ -338,6 +407,9 @@ void ParseStatement(TOKEN tokens[]) {
    {
       case PRINT:
          ParsePRINTStatement(tokens);
+         break;
+      case INPUT:
+         ParseINPUTStatement(tokens);
          break;
       default:
          ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
@@ -413,6 +485,11 @@ void ParsePRINTStatement(TOKEN tokens[]) {
    GetNextToken(tokens);
 
    ExitModule("PRINTStatement");
+}
+void ParseINPUTStatement(TOKEN tokens[]) {
+   void GetNextToken(TOKEN tokens[]);
+
+   //TODO:
 }
 
 void ParseExpression(TOKEN tokens[], DATATYPE &datatype)
@@ -732,6 +809,36 @@ void ParsePrimary(TOKEN tokens[], DATATYPE &datatype)
          ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting integer, true, false, or (");
          break;
    }
+}
+void ParseVariable(TOKEN tokens[], bool asLValue, DATATYPE &datatype) {
+   void GetNextToken(TOKEN tokens[]);
+
+   bool isInTable;
+   int index;
+   IDENTIFIERTYPE identifierType;
+
+   EnterModule("Variable");
+
+   if(tokens[0].type != IDENTIFIER) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting identifier");
+      index = identifierTable.GetIndex(tokens[0].lexeme,isInTable);
+   }
+   if(!isInTable) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Undefined identifier");
+   }
+
+   identifierType = identifierTable.GetType(index);
+   datatype = identifierTable.GetDatatype(index);
+
+   if(asLValue) {
+      code.EmitFormattedLine("","PUSHA",identifierTable.GetReference(index));
+   }
+   else {
+      code.EmitFormattedLine("","PUSH",identifierTable.GetReference(index));
+   }
+
+   GetNextToken(tokens);
+   ExitModule("Variable");
 }
 //-----------------------------------------------------------
 void Callback1(int sourceLineNumber,const char sourceLine[])

@@ -1,0 +1,38 @@
+/*---------------------------------------------------------*/
+; Dr. Art Hanna
+; Problem #5
+; P5.spl
+;------------------------------------------------------------
+
+VAR x1: INT.
+CON c1: INT := 1,c2: BOOL := true.
+VAR x2: INT,x3: INT.
+
+PROGRAM
+   VAR sum: INT, x1: INT.
+   VAR b1: BOOL,b2: BOOL.
+   CON c3: INT := 3,c4: BOOL := false.
+
+   PRINT "c1 = ",c1,ENDL.
+   PRINT "c2 = ",c2,ENDL.
+   PRINT "c3 = ",c3,ENDL.
+   PRINT "c4 = ",c4,ENDL.
+
+/* Generates a static semantic (context-dependent) error
+   c1 := 2.
+*/
+   x1 := 0.
+   INPUT "x1? " x1.
+   INPUT x2.
+   sum := x1+x2+c1.
+   PRINT "x1+x2+c1 = ",sum,ENDL.
+
+; test new increment and decrement operators   
+   PRINT "x1 = ",x1,", ++x1 = ",++x1,ENDL.
+   PRINT "x1 = ",x1,", --x1 = ",--x1,ENDL.
+
+   INPUT "b1? " b1.
+   b2 := NOT(b1) OR (c2 XOR c4).
+   PRINT "b1 = ",b1,", b2 = ",b2,ENDL.
+END
+
