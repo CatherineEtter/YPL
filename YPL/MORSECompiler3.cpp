@@ -40,6 +40,7 @@ typedef enum
    ENDLINE,
    NEWLINE,
    QUOTE,
+   ASSIGNMENT,
    TRUE,
    FALSE,
    INTDATATYPE,
@@ -102,6 +103,7 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { NOT              ,"-. --- -"           ,true},
    { OPARENTHESIS     ,"-.--."              ,true}, // Parenthesis (
    { CPARENTHESIS     ,"-.--.-"             ,true}, // Parenthesis )
+   { ASSIGNMENT       ,"-...-"              ,true}, //=
    { TRUE             ,"- .-. ..- ."        ,true}, // TRUE
    { FALSE            ,"..-. .- .-.. ... ." ,true}, //FALSE
    { INTDATATYPE      ,".. -. -"            ,true}, //INT
@@ -400,6 +402,7 @@ void ParseStatement(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
    void ParsePRINTStatement(TOKEN tokens[]);
    void ParseINPUTStatement(TOKEN tokens[]);
+   void ParseAssignmentStatement(TOKEN tokens[]);
 
    EnterModule("Statement");
 
@@ -410,6 +413,9 @@ void ParseStatement(TOKEN tokens[]) {
          break;
       case INPUT:
          ParseINPUTStatement(tokens);
+         break;
+      case IDENTIFIER:
+         ParseAssignmentStatement(tokens);
          break;
       default:
          ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
@@ -491,7 +497,61 @@ void ParseINPUTStatement(TOKEN tokens[]) {
 
    //TODO:
 }
+void ParseAssignmentStatement(TOKEN tokens[]) 
+{
+   void ParseVariable(TOKEN tokens[], bool asLValue, DATATYPE &datatype);
+   void ParseExpression(TOKEN tokens[], DATATYPE &datatype);
+   void GetNextToken(TOKEN tokens[]);
 
+   char line[SOURCELINELENGTH+1];
+   DATATYPE datatypeLHS, datatypeRHS;
+   int n;
+
+   EnterModule("AssignmentStatement");
+
+   sprintf(line,"; **** assignment statement (%4d)",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
+
+   ParseVariable(tokens, true, datatypeLHS);
+   n = 1;
+   while(tokens[0].type == COMMA) {
+      DATATYPE datatype;
+
+      GetNextToken(tokens);
+      ParseVariable(tokens, true, datatype);
+      n++;
+
+      if(datatype != datatypeLHS) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Mixed-mode variables not allowed");
+      }
+   }
+   if(tokens[0].type != ASSIGNMENT) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-...-'");
+   }
+   GetNextToken(tokens);
+
+   ParseExpression(tokens, datatypeRHS);
+   if(datatypeLHS != datatypeRHS) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Data type mismatch");
+   }
+
+   // CODEGENERATION
+   for (int i = 1; i <= n; i++)
+   {
+      code.EmitFormattedLine("","MAKEDUP");
+      code.EmitFormattedLine("","POP","@SP:0D2");
+      code.EmitFormattedLine("","SWAP");
+      code.EmitFormattedLine("","DISCARD","#0D1");
+   }
+   code.EmitFormattedLine("","DISCARD","#0D1");
+   // ENDCODEGENERATION
+   if(tokens[0].type != ENDLINE) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.-'");
+   }
+   GetNextToken(tokens);
+
+   ExitModule("AssignmentStatement");
+}
 void ParseExpression(TOKEN tokens[], DATATYPE &datatype)
 {
    void ParseConjuction(TOKEN tokens[], DATATYPE &datatype);
