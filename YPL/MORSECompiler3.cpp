@@ -366,8 +366,8 @@ void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
                strcat(literal,tokens[0].lexeme);
             }
             else if(((datatype == BOOLEANTYPE) && (tokens[0].type == TRUE)) || ((datatype == BOOLEANTYPE) && (tokens[0].type == FALSE))) {
-               strcpy(literal,tokens[0].lexeme);
-               tokens[0].type == TRUE ? strcpy(literal,"true") : strcpy(literal,"false");
+               //strcpy(literal,tokens[0].lexeme);
+               tokens[0].type == TRUE ? strcpy(literal,"TRUE") : strcpy(literal,"FALSE");
             }
             else {
                ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Data type mismatch");
