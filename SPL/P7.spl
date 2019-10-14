@@ -1,0 +1,58 @@
+;-------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #7
+; P7.spl
+;-------------------------------------------------------------
+
+PROGRAM
+   VAR x: INT,y: INT.
+
+   INPUT "x? " x.
+   INPUT "y? " y.
+
+   IF ( x < y ) THEN
+      PRINT "x  < y",ENDL.
+   END
+
+   IF ( x != y ) THEN
+      PRINT "x != y",ENDL.
+   END
+
+   IF ( x <> y ) THEN
+      PRINT "x <> y",ENDL.
+   END
+
+   IF ( x < y ) THEN
+      PRINT "x  < y",ENDL.
+   ELSE
+      PRINT "x >= y",ENDL.
+   END
+
+   IF     ( x < y ) THEN
+      PRINT "x  < y",ENDL.
+   ELIF ( x = y ) THEN
+      PRINT "x  = y",ENDL.
+   ELIF ( x > y ) THEN
+      PRINT "x  > y",ENDL.
+   END
+
+   IF     ( x < y ) THEN
+      PRINT "x  < y",ENDL.
+   ELIF ( x = y ) THEN
+      PRINT "x  = y",ENDL.
+   ELIF ( x > y ) THEN
+      PRINT "x  > y",ENDL.
+   ELSE
+      PRINT "***ERROR***",ENDL.
+   END
+
+   IF     ( x = y ) THEN
+      PRINT "x  = y",ENDL.
+   ELSE
+      IF ( x > y ) THEN
+         PRINT "x  > y",ENDL.
+      ELSE
+         PRINT "x  < y",ENDL.
+      END
+   END
+END

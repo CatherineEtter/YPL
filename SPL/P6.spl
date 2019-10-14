@@ -1,0 +1,23 @@
+;-------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #6
+; P6.spl
+;-------------------------------------------------------------
+
+PROGRAM
+   VAR x: INT.
+   VAR y: INT.
+
+   DO
+      INPUT "x? " x.
+   WHILE ( x <> 0 )
+      INPUT "y? " y.
+      IF   ( x < y ) THEN
+         PRINT "x  < y",ENDL.
+      ELIF ( x = y ) THEN
+         PRINT "x  = y",ENDL.
+      ELIF ( x > y ) THEN
+         PRINT "x  > y",ENDL.
+      END
+   END
+END
