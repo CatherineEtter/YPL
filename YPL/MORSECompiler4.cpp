@@ -678,6 +678,7 @@ void ParseIFStatement(TOKEN tokens[])
          sprintf(Ilabel,"I%04d",code.LabelSuffix());
          code.EmitFormattedLine("","JMPNT",Ilabel);
       // ENDCODEGENERATION
+      
       while( (tokens[0].type != ELSE) && (tokens[0].type != ELSEIF) && (tokens[0].type != ENDFUNC) ) {
          ParseStatement(tokens);
       }
