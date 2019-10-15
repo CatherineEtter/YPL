@@ -678,7 +678,6 @@ void ParseIFStatement(TOKEN tokens[])
          sprintf(Ilabel,"I%04d",code.LabelSuffix());
          code.EmitFormattedLine("","JMPNT",Ilabel);
       // ENDCODEGENERATION
-
       while( (tokens[0].type != ELSE) && (tokens[0].type != ELSEIF) && (tokens[0].type != ENDFUNC) ) {
          ParseStatement(tokens);
       }
@@ -729,6 +728,7 @@ void ParseDOWHILEStatement(TOKEN tokens[])
    while(tokens[0].type != WHILE) {
       ParseStatement(tokens);
    }
+   GetNextToken(tokens);
    if(tokens[0].type != OPARENTHESIS) {
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.--.'");
    }
@@ -746,6 +746,12 @@ void ParseDOWHILEStatement(TOKEN tokens[])
    code.EmitFormattedLine("","SETT");
    code.EmitFormattedLine("","DISCARD","#0D1");
    code.EmitFormattedLine("","JMPNT",Elabel);
+   // ENDCODEGENERATION
+   GetNextToken(tokens);
+
+   // CODEGENERATION
+   code.EmitFormattedLine("","JMP",Dlabel);
+   code.EmitFormattedLine(Elabel,"EQU","*");
    // ENDCODEGENERATION
 /*
    while(tokens[0].type != ENDFUNC) {
