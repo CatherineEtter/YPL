@@ -1,0 +1,68 @@
+;-------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #8
+; P8.spl
+;-------------------------------------------------------------
+
+CON initialX: INT := 1.
+
+VAR i: INT.
+
+PROGRAM
+   CON initialY: INT := 3.
+
+   VAR n: INT,x: INT,y: INT.
+
+   INPUT "n? " n.
+
+   PRINT "FOR-loop (1)",ENDL.
+   x := initialX. y := initialY.
+   FOR i := 1 TO n BY 1
+      PRINT i,": ".
+      IF   ( x < y ) THEN
+         PRINT x," < ",y,ENDL.
+      ELIF ( x = y ) THEN
+         PRINT x," = ",y,ENDL.
+      ELIF ( x > y ) THEN
+         PRINT x," > ",y,ENDL.
+      END
+      x := x+1.
+      y := y-1.
+   END
+
+   PRINT "FOR-loop (2)",ENDL.
+   x := initialX. y := initialY.
+   FOR i := 1 TO n
+      PRINT i,": ".
+      IF   ( x < y ) THEN
+         PRINT x," < ",y,ENDL.
+      ELIF ( x = y ) THEN
+         PRINT x," = ",y,ENDL.
+      ELIF ( x > y ) THEN
+         PRINT x," > ",y,ENDL.
+      END
+      x := x+2.
+      y := y-2.
+   END
+
+   PRINT "FOR-loop (3)",ENDL.
+   x := initialX. y := initialY.
+   FOR i := n TO 1 BY -1
+      PRINT i,": ".
+      IF   ( x < y ) THEN
+         PRINT x," < ",y,ENDL.
+      ELIF ( x = y ) THEN
+         PRINT x," = ",y,ENDL.
+      ELIF ( x > y ) THEN
+         PRINT x," > ",y,ENDL.
+      END
+      x := x+3.
+      y := y-3.
+   END
+
+   PRINT "FOR-loop (4)",ENDL.
+   FOR i := 1 TO n BY 1-1              ; run-time error #2 (e3 = 0)
+      PRINT "UNREACHABLE",ENDL.
+   END
+
+END
