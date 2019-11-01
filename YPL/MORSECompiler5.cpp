@@ -58,6 +58,7 @@ typedef enum
    OR,
    AND,
    NOT,
+   ASSERT,
 // punctuation
    COMMA,
    PERIOD,
@@ -114,6 +115,7 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { OR               ,"--- .-."            ,true},
    { AND              ,".- -. -.."          ,true},
    { NOT              ,"-. --- -"           ,true},
+   { ASSERT           ,".- ... .-. -"       ,true}, //ASRT
    { OPARENTHESIS     ,"-.--."              ,true}, // Parenthesis (
    { CPARENTHESIS     ,"-.--.-"             ,true}, // Parenthesis )
    { ASSIGNMENT       ,"-...-"              ,true}, //=
@@ -463,6 +465,7 @@ void ParseFUNCTIONDefinition(TOKEN tokens[]) {
 }
 
 void ParseStatement(TOKEN tokens[]) {
+   void ParseAssertion(TOKEN tokens[]);
    void GetNextToken(TOKEN tokens[]);
    void ParsePRINTStatement(TOKEN tokens[]);
    void ParseINPUTStatement(TOKEN tokens[]);
@@ -493,6 +496,9 @@ void ParseStatement(TOKEN tokens[]) {
       case FOR:
          ParseFORStatement(tokens);
          break;
+      case ASSERT:
+         ParseAssertion(tokens);
+         break;
       default:
          ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
                               "Expecting beginning-of-statement");
@@ -500,6 +506,53 @@ void ParseStatement(TOKEN tokens[]) {
    }
 
    ExitModule("Statement");
+}
+
+void ParseAssertion(TOKEN tokens[]) {
+   void GetNextToken(TOKEN tokens[]);
+   void ParseExpression(TOKEN tokens[], DATATYPE &datatype);
+
+   char line[SOURCELINELENGTH+1];
+   DATATYPE datatype;
+
+   EnterModule("Assertion");
+
+   sprintf(line,"; **** %4d: { assertion }",tokens[0].sourceLineNumber);
+   code.EmitUnformattedLine(line);
+
+   GetNextToken(tokens);
+
+   if(tokens[0].type != OPARENTHESIS) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.--.'");
+   }
+   GetNextToken(tokens);
+
+   ParseExpression(tokens, datatype);
+
+// STATICSEMANTICS
+   if ( datatype != BOOLEANTYPE )
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting boolean expression");
+// ENDSTATICSEMANTICS
+
+   char Elabel[SOURCELINELENGTH+1],operand[SOURCELINELENGTH+1];
+
+   code.EmitFormattedLine("","SETT");
+   sprintf(Elabel,"E%04d",code.LabelSuffix());
+   code.EmitFormattedLine("","JMPT",Elabel);
+   sprintf(operand,"#0D%d",tokens[0].sourceLineNumber);
+   code.EmitFormattedLine("","PUSH",operand);
+   code.EmitFormattedLine("","PUSH","#0D1");
+   code.EmitFormattedLine("","JMP","HANDLERUNTIMEERROR");
+   code.EmitFormattedLine(Elabel,"EQU","*");
+   code.EmitFormattedLine("","DISCARD","#0D1");
+// ENDCODEGENERATION
+
+   if(tokens[0].type != CPARENTHESIS) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.--.-'");
+   }
+   GetNextToken(tokens);
+
+   ExitModule("Assertion");
 }
 
 void ParsePRINTStatement(TOKEN tokens[]) {
@@ -794,6 +847,11 @@ void ParseFORStatement(TOKEN tokens[])
 
    GetNextToken(tokens);
 
+   if(tokens[0].type != OPARENTHESIS) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.--.'");
+   }
+   GetNextToken(tokens);
+
    ParseVariable(tokens, true, datatype);
 
    if(datatype != INTEGERTYPE) {
@@ -821,7 +879,7 @@ void ParseFORStatement(TOKEN tokens[])
 
 //Mid Expression
    ParseExpression(tokens, datatype);
-   if(datatype != BOOLEANTYPE) {
+   if(datatype != INTEGERTYPE) {
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting boolean data type");
    }
 
@@ -834,6 +892,13 @@ void ParseFORStatement(TOKEN tokens[])
    if(datatype != INTEGERTYPE) {
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting integer data type");
    }
+
+   if(tokens[0].type != CPARENTHESIS) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.--.-'");
+   }
+   GetNextToken(tokens);
+
+   //for ( i = 1 . i < 3 . i = i + 1 )
 
    // CODEGENERATION
    sprintf(Dlabel,"D%04d",code.LabelSuffix());
