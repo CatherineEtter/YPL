@@ -1,0 +1,31 @@
+;------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #10
+; P10.spl
+;------------------------------------------------------------
+
+VAR x: INT,y: INT.
+
+PROCEDURE P(IN in1: INT, OUT out1: INT, IO io1: INT, REF ref1: BOOL)
+   CON C1: INT := 101.
+   
+   out1 := in1+C1.
+   io1 := io1+1.
+   ref1 := NOT ref1.
+END
+
+PROGRAM
+   CON P1: INT := 1.
+
+   VAR P2: INT, P3: INT.
+   VAR P4: BOOL.
+
+   P3 := 3.
+   P4 := TRUE.
+   
+   CALL P(P1,P2,P3,P4).
+   PRINT "P1 = ",P1,ENDL.
+   PRINT "P2 = ",P2,ENDL.
+   PRINT "P3 = ",P3,ENDL.
+   PRINT "P4 = ",P4,ENDL.
+END

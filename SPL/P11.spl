@@ -1,0 +1,116 @@
+;-------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #11
+; P11.spl
+;-------------------------------------------------------------
+
+VAR x: INT,y: INT.
+VAR z: BOOL.
+
+PROCEDURE PIN0
+   PRINT "PIN0()",ENDL.
+   RETURN.
+END
+
+PROCEDURE PIN1(x: INT)
+   PRINT "PIN1(",x,")",ENDL.
+;   RETURN.
+END
+
+PROCEDURE PIN2(x: INT,IN y: INT)
+   PRINT "PIN2(",x,",",y,")",ENDL.
+END
+
+PROCEDURE POUT1(OUT b: BOOL)
+   PRINT "POUT1",ENDL.
+   b := true.
+END
+
+PROCEDURE POUT2(OUT x: INT,OUT y: INT)
+   PRINT "POUT2",ENDL.
+   x := 2.
+   y := 2*x.
+   RETURN.
+END
+
+PROCEDURE PIN1R(x: INT)
+   IF ( x > 0 ) THEN
+      PRINT x,ENDL.
+      CALL PIN1R(x-1).
+   END
+END
+
+PROCEDURE PIN1OUT1(IN x: INT,OUT y: INT)
+   PRINT "PIN1OUT1",ENDL.
+   y := x.
+END
+
+PROCEDURE PIN1OUT1R(x: INT,OUT y: INT)
+   IF ( x = 0 ) THEN
+      y := 42.
+   ELSE
+      CALL PIN1OUT1R(x-1,y).
+   END
+END
+
+PROCEDURE PIO1(IO x: INT)
+   PRINT "PIO1",ENDL.
+   x := x+2.
+END
+
+PROCEDURE PIO2(IO x1: INT,IO x2: INT)
+   VAR T: INT.
+
+   PRINT "PIO2",ENDL.
+   T := x1.
+   x1 := x2.
+   x2 := T.
+END
+
+PROCEDURE PREF2(REF i: INT,REF x: BOOL)
+   PRINT "PREF2 (i,x) = (",i,",",x,")",ENDL.
+   x := NOT x.
+   RETURN.
+END
+
+PROGRAM
+   VAR i: INT.
+
+   CALL PIN0.
+
+   CALL PIN1(1).
+
+   x := 2.
+   CALL PIN2(x,x+2).
+
+   CALL POUT1(z).
+   PRINT "z = ",z,ENDL.
+
+   CALL POUT2(x,y).
+   PRINT "x = ",x,", y = ",y,ENDL.
+
+   PRINT "PIN1R(3)",ENDL.
+   CALL PIN1R(3).
+
+   x := 1.
+   CALL PIN1OUT1(x,y).
+   PRINT "y = ",y,ENDL.
+
+   PRINT "PIN1OUT1R",ENDL.
+   CALL PIN1OUT1R(3,y).
+   PRINT "y = ",y,ENDL.
+
+   y := 7.
+   CALL PIO1(y).
+   PRINT "y = ",y,ENDL.
+
+   x := 3. y := 7.
+   PRINT "(x,y) = (",x,",",y,")",ENDL.
+   CALL PIO2(x,y).
+   PRINT "(x,y) = (",x,",",y,")",ENDL.
+
+   FOR i := 1 TO 2
+      CALL PREF2(i,z).
+   END
+
+END
