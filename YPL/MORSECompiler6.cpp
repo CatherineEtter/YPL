@@ -567,51 +567,7 @@ void ParseFUNCTIONDefinition(TOKEN tokens[])
 
    ExitModule("PROCEDUREDefinition");
 }
-/*
-void ParseMAINDefinition(TOKEN tokens[]) {
-   void GetNextToken(TOKEN tokens[]);
-   void ParseStatement(TOKEN tokens[]);
 
-   char line[SOURCELINELENGTH+1];
-   char label[SOURCELINELENGTH+1];
-   char reference[SOURCELINELENGTH+1];
-
-   EnterModule("MAINDefinition");
-
-   GetNextToken(tokens);
-
-   if(tokens[0].type != IDENTIFIER) {
-      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting Identifier");
-   }
-   GetNextToken(tokens);
-
-   identifierTable.EnterNestedStaticScope();
-
-   ParseDataDefinitions(tokens,PROGRAMMODULESCOPE);
-
-   while(tokens[0].type != ENDFUNC) {
-      ParseStatement(tokens);
-   }
-
-   // CODEGENERATION
-   code.EmitFormattedLine("","RETURN");
-   code.EmitUnformattedLine("; **** =========");
-   sprintf(line,"; **** END (%4d)",tokens[0].sourceLineNumber);
-   code.EmitUnformattedLine(line);
-   code.EmitUnformattedLine("; **** =========");
-   // ENDCODEGENERATION
-
-   #ifdef TRACECOMPILER
-   identifierTable.DisplayTableContents("Contents of identifier table at end of compilation of PROGRAM module definition");
-   #endif
-
-   identifierTable.ExitNestedStaticScope();
-
-   GetNextToken(tokens);
-
-   ExitModule("MAINDefinition");
-}
-*/
 void ParseFormalParameter(TOKEN tokens[], IDENTIFIERTYPE &identifierType, int &n) {
    void GetNextToken(TOKEN tokens[]);
 
@@ -626,7 +582,7 @@ void ParseFormalParameter(TOKEN tokens[], IDENTIFIERTYPE &identifierType, int &n
    sprintf(reference,"FB:0D%d",code.GetFBOffset());
    code.IncrementFBOffset(1);
    n += 1;
-   
+
    switch ( tokens[0].type )
    {
       case INTDATATYPE:
