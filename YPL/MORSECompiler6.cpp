@@ -266,15 +266,27 @@ void ParseSPLProgram(TOKEN tokens[])
 //-----------------------------------------------------------
 {
    void GetNextToken(TOKEN tokens[]);
-   void ParsePROGRAMDefinition(TOKEN tokens[]);
+   void ParseMAINDefinition(TOKEN tokens[]);
+   void ParseFUNCTIONDefinition(TOKEN tokens[]);
+   void ParseDataDefinitions(TOKEN tokens[],IDENTIFIERSCOPE identifierScope);
 
    EnterModule("MORSEProgram");
 
-   if ( tokens[0].type == TRANSMISSION )
-      ParsePROGRAMDefinition(tokens);
-   else
-      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
-                           "Expecting -... . –-. .. -.");
+   ParseDataDefinitions(tokens,GLOBALSCOPE);
+
+#ifdef TRACECOMPILER
+   identifierTable.DisplayTableContents("Contents of identifier table after compilation of global data definitions");
+#endif
+   while(tokens[0].type == FUNCTION) {
+      ParseFUNCTIONDefinition(tokens);
+   }
+
+   if(tokens[0].type == MAIN) {
+      ParseMAINDefinition(tokens);
+   } 
+   else {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting MAIN");
+   }
 
    if ( tokens[0].type != EOPTOKEN ) 
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
@@ -283,17 +295,19 @@ void ParseSPLProgram(TOKEN tokens[])
    ExitModule("MORSEProgram");
 }
 
-void ParsePROGRAMDefinition(TOKEN tokens[]) {
+void ParseMAINDefinition(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
    void ParseStatement(TOKEN tokens[]);
    void ParseMAINDefinition(TOKEN tokens[]);
    void ParseFUNCTIONDefinition(TOKEN tokens[]);
+   void ParseDataDefinitions(TOKEN tokens[],IDENTIFIERSCOPE identifierScope);
+
 
    char line[SOURCELINELENGTH+1];
    char label[SOURCELINELENGTH+1];
    char reference[SOURCELINELENGTH+1];
 
-   EnterModule("PROGRAMDefinition");
+   EnterModule("MAINDefinition");
 
    // CODEGENERATION
    code.EmitUnformattedLine("; **** =========");
@@ -323,20 +337,12 @@ void ParsePROGRAMDefinition(TOKEN tokens[]) {
 
    GetNextToken(tokens);
 
-   while(tokens[0].type == FUNCTION) {
-      ParseFUNCTIONDefinition(tokens);
-   }
-   if(tokens[0].type == MAIN) {
-      ParseMAINDefinition(tokens);
-   } 
-   else {
-      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex, "Expecting MAIN");
-   }
-   /*while ( tokens[0].type != END )
-      ParseStatement(tokens);*/
+   identifierTable.EnterNestedStaticScope();
 
-   if(tokens[0].type != EOPTOKEN) {
-      GetNextToken(tokens);
+   ParseDataDefinitions(tokens,PROGRAMMODULESCOPE);
+
+   while (tokens[0].type != ENDFUNC) {
+      ParseStatement(tokens);
    }
 
    // CODEGENERATION
@@ -347,7 +353,15 @@ void ParsePROGRAMDefinition(TOKEN tokens[]) {
    code.EmitUnformattedLine("; **** =========");
    // ENDCODEGENERATION
 
-   ExitModule("PROGRAMDefinition");
+#ifdef TRACECOMPILER
+   identifierTable.DisplayTableContents("Contents of identifier table at end of compilation of PROGRAM module definition");
+#endif
+
+   identifierTable.ExitNestedStaticScope();
+
+   GetNextToken(tokens);
+
+   ExitModule("MAINDefinition");
 }
 void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
    void GetNextToken(TOKEN tokens[]);
@@ -553,7 +567,7 @@ void ParseFUNCTIONDefinition(TOKEN tokens[])
 
    ExitModule("PROCEDUREDefinition");
 }
-
+/*
 void ParseMAINDefinition(TOKEN tokens[]) {
    void GetNextToken(TOKEN tokens[]);
    void ParseStatement(TOKEN tokens[]);
@@ -597,7 +611,7 @@ void ParseMAINDefinition(TOKEN tokens[]) {
 
    ExitModule("MAINDefinition");
 }
-
+*/
 void ParseFormalParameter(TOKEN tokens[], IDENTIFIERTYPE &identifierType, int &n) {
    void GetNextToken(TOKEN tokens[]);
 
@@ -612,8 +626,7 @@ void ParseFormalParameter(TOKEN tokens[], IDENTIFIERTYPE &identifierType, int &n
    sprintf(reference,"FB:0D%d",code.GetFBOffset());
    code.IncrementFBOffset(1);
    n += 1;
-   GetNextToken(tokens);
-
+   
    switch ( tokens[0].type )
    {
       case INTDATATYPE:
@@ -1218,8 +1231,8 @@ void ParseCALLStatement(TOKEN tokens[])
    }
    // ENDCODEGENERATION
 
-   if(tokens[0].type != ENDFUNC) {
-      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '.'");
+   if(tokens[0].type != ENDLINE) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.-'");
    }
    GetNextToken(tokens);
 
