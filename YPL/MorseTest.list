@@ -1,18 +1,0 @@
-"MorseTest.spl" Page    1
-Line Source Line
----- -------------------------------------------------------------------------------
-   1 -...-/Main/.--. .-. .. -. -/<<this is a comment>>/.-..-./Hello World/.-..-./.-.-.-/-.-
-At (   1:  0) token =        -...- lexeme = \-...-\
-At (   1:  6) token =   IDENTIFIER lexeme = \Main\
-At (   1: 11) token = .--. .-. .. -. - lexeme = \.--. .-. .. -. -\
-At (   1: 28) begin block comment depth = 1
-At (   1: 47)   end block comment depth = 1
-At (   1: 50) token =       .-..-. lexeme = \.-..-.\
-At (   1: 57) token =   IDENTIFIER lexeme = \Hello World\
-At (   1: 69) token =       .-..-. lexeme = \.-..-.\
-At (   1: 76) token =       .-.-.- lexeme = \.-.-.-\
-At (   1: 83) token =          -.- lexeme = \-.-\
-At (   1: 86) token =     EOPTOKEN lexeme = \\
-At (   1: 86) token =     EOPTOKEN lexeme = \\
-At (   1: 86) token =     EOPTOKEN lexeme = \\
-******* SPL1 scanner ending

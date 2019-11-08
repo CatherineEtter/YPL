@@ -1,0 +1,70 @@
+;------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #12
+; P12.spl
+;------------------------------------------------------------
+VAR x: INT,y: INT.
+
+FUNCTION F0:INT()
+   RETURN( 1-1 ).
+END
+
+FUNCTION F1:INT(IN x: INT)
+   VAR y: INT.
+
+   y := x+1.
+   RETURN( y ).
+END
+
+FUNCTION F2:INT(IN x: INT)
+   VAR y: INT.
+
+   RETURN( F0() + F1(x) ).
+END
+
+FUNCTION F3:INT(x: INT)      ; F3() is *recursive*
+   IF ( x = 0 ) THEN
+      RETURN( 1 ).
+   ELSE
+      RETURN( 1 + F3(x-1) ).
+   END
+END
+
+FUNCTION F4:INT(x1: INT,x2: INT,x3: INT)
+   RETURN( x1*x2*x3 ).
+END
+
+FUNCTION F5:INT(IN x: INT,IN y: INT)
+   RETURN( F3(x) + F2(y) ).
+END
+
+PROCEDURE P1(IN x1: INT,OUT x2: INT,IO x3: INT,REF x4: INT)
+   PRINT "P1",ENDL.
+   x2 := F3(x1).   PRINT "x2=",x2,ENDL.
+   x3 := x3+x2+x4. PRINT "x3=",x3,ENDL.
+   x4 := x3.       PRINT "x4=",x4,ENDL.
+END 
+
+PROGRAM
+   VAR x: INT,i: INT.
+   VAR x1: INT,x2: INT,x3: INT,x4: INT.
+
+   DO
+      INPUT "x? " x.
+   WHILE ( x <> 0 )
+      INPUT "y? " y.
+      PRINT "F0        = ",F0(),ENDL.
+      FOR i := 1 TO x
+         PRINT "F1(",i,")     = ",F1(i),ENDL.
+      END
+      PRINT "F2(2)     = ",F2(2),ENDL.
+      PRINT "F3(3)     = ",F3(3),ENDL.
+      PRINT "F4(4,5,6) = ",F4(4,5,6),ENDL.
+      PRINT "F5(x,y)   = ",F5(x,y),ENDL.
+   END
+   
+   x1 := 1. x2 := 2. x3 := 3. x4 := 4.
+   CALL P1(x1,x2,x3,x4).
+   PRINT "x1,x2,x3,x4=",x1,",",x2,",",x3,",",x4,ENDL.
+   
+END
