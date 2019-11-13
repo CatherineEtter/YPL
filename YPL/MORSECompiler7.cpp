@@ -1598,12 +1598,81 @@ void ParsePrimary(TOKEN tokens[], DATATYPE &datatype)
          GetNextToken(tokens);
          break;
       case IDENTIFIER:
-         ParseVariable(tokens, false, datatype);
+         {
+            bool isInTable;
+            int index;
+
+            index = identifierTable.GetIndex(tokens[0].lexeme,isInTable);
+            if(!isInTable) {
+               ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Undefined identifier");
+            }
+            //Variable Ref
+            if(identifierTable.GetType(index) != FUNCTION_SUBPROGRAMMODULE) {
+               ParseVariable(tokens, false, datatype);
+            }
+            else {
+               //Function sub_programmodule
+               char operand[MAXIMUMLENGTHIDENTIFIER+1];
+               int parameters;
+
+               GetNextToken(tokens);
+               if(tokens[0].type != OPARENTHESIS) {
+                  ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '('");
+               }
+               // CODEGENERATION
+               code.EmitFormattedLine("","PUSH","#0X0000","reserve space for function return value");
+               // ENDCODEGENERATION
+
+               datatype = identifierTable.GetDatatype(index);
+               parameters = 0;
+               if (tokens[1].type == CPARENTHESIS) {
+                  GetNextToken(tokens);
+               }
+               else {
+                  do {
+                     DATATYPE expressionDatatype;
+
+                     GetNextToken(tokens);
+                     ParseExpression(tokens,expressionDatatype);
+                     parameters++;
+                     
+// STATICSEMANTICS
+                     if(expressionDatatype != identifierTable.GetDatatype(index+parameters)) {
+                        ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
+                           "Actual parameter data type does not match formal parameter data type");
+                     }
+// ENDSTATICSEMANTICS
+
+                  }while(tokens[0].type == COMMA);
+               }
+               // STATICSEMANTICS
+               if(identifierTable.GetCountOfFormalParameters(index) != parameters) {
+                  ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
+                     "Number of actual parameters does not match number of formal parameters");
+               }
+                     // ENDSTATICSEMANTICS
+
+               if(tokens[0].type != CPARENTHESIS) {
+                  ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting ')'");
+               }
+               GetNextToken(tokens);
+
+               // CODEGENERATION
+               code.EmitFormattedLine("","PUSHFB");
+               code.EmitFormattedLine("","CALL",identifierTable.GetReference(index));
+               code.EmitFormattedLine("","POPFB");
+               sprintf(operand,"#0D%d",parameters);
+               code.EmitFormattedLine("","DISCARD",operand);
+               // ENDCODEGENERATION
+
+            }
+         }
          break;
       default:
          ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting integer, true, false, or (");
          break;
    }
+   ExitModule("Primary");
 }
 void ParseVariable(TOKEN tokens[], bool asLValue, DATATYPE &datatype) {
    void GetNextToken(TOKEN tokens[]);

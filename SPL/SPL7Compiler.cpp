@@ -20,7 +20,7 @@ using namespace std;
 //#define TRACEIDENTIFIERTABLE
 #define TRACECOMPILER
 
-#include "..\SPL.h"
+#include "SPL.h"
 
 /*
 ========================
