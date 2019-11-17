@@ -38,6 +38,10 @@ FUNCTION F5:INT(IN x: INT,IN y: INT)
    RETURN( F3(x) + F2(y) ).
 END
 
+FUNCTION F6:INT()
+    RETURN(8888).
+END
+
 PROCEDURE P1(IN x1: INT,OUT x2: INT,IO x3: INT,REF x4: INT)
    PRINT "P1",ENDL.
    x2 := F3(x1).   PRINT "x2=",x2,ENDL.
@@ -61,6 +65,7 @@ PROGRAM
       PRINT "F3(3)     = ",F3(3),ENDL.
       PRINT "F4(4,5,6) = ",F4(4,5,6),ENDL.
       PRINT "F5(x,y)   = ",F5(x,y),ENDL.
+      PRINT "F6(x,y)   = ",F6(),ENDL.
    END
    
    x1 := 1. x2 := 2. x3 := 3. x4 := 4.
