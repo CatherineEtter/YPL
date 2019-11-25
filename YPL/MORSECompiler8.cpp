@@ -62,11 +62,15 @@ typedef enum
    ASSERT,
    CALL,
    RETURN,
+   UB,
+   LB,
 // punctuation
    COMMA,
    PERIOD,
    OPARENTHESIS,
    CPARENTHESIS,
+   OBRACKET,
+   CBRACKET,
 // operators
    LESSTHAN,
    LESSTHANEQUAL,
@@ -122,8 +126,12 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { ASSERT           ,".- ... .-. -"       ,true}, //ASRT
    { CALL             ,"-.-. .- .-.. .-.."  ,true},
    { RETURN           ,".-. - .-. -."       ,true},
+   { UB               ,"UB"                 ,true}, //Upperbound of arrays
+   { LB               ,"LB"                 ,true},
    { OPARENTHESIS     ,"-.--."              ,true}, // Parenthesis (
    { CPARENTHESIS     ,"-.--.-"             ,true}, // Parenthesis )
+   { OBRACKET         ,"["                  ,true},
+   { CBRACKET         ,"]"                  ,true},
    { ASSIGNMENT       ,"-...-"              ,true}, //=
    { TRUE             ,"- .-. ..- ."        ,true}, // TRUE
    { FALSE            ,"..-. .- .-.. ... ." ,true}, //FALSE
@@ -367,7 +375,7 @@ void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
    void GetNextToken(TOKEN tokens[]);
 
    EnterModule("DataDefinitions");
-
+//Equivalent to SPL "VAR"
    while( (tokens[0].type == INTDATATYPE) || (tokens[0].type == DOUBLEDATATYPE) || (tokens[0].type == STRINGDATATYPE) || (tokens[0].type == BOOLDATATYPE) || (tokens[0].type == CHARDATATYPE)) {
       
       char identifier[MAXIMUMLENGTHIDENTIFIER+1];
@@ -375,6 +383,10 @@ void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
       DATATYPE datatype;
       bool isInTable;
       int index;
+      int dimensions;
+      vector<int> LBs;
+      vector<int> UBs;
+      int capacity;
 
       do {
          switch(tokens[0].type) {
@@ -614,13 +626,11 @@ void ParseFormalParameter(TOKEN tokens[], IDENTIFIERTYPE &identifierType, int &n
    bool isInTable;
    int index;
    DATATYPE datatype;
+   int dimensions;
 
    EnterModule("FormalParameter");
 
-   identifierType = IN_PARAMETER;
-   sprintf(reference,"FB:0D%d",code.GetFBOffset());
-   code.IncrementFBOffset(1);
-   n += 1;
+   
 
    switch ( tokens[0].type )
    {
@@ -634,6 +644,28 @@ void ParseFormalParameter(TOKEN tokens[], IDENTIFIERTYPE &identifierType, int &n
          ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting INT or BOOL");
    }
    GetNextToken(tokens);
+
+   dimensions = 0;
+   if(tokens[0].type == OBRACKET) {
+      identifierType = REF_PARAMETER;
+      sprintf(reference,"@FB:0D%d",code.GetFBOffset());
+      code.IncrementFBOffset(1);
+      n += 1;
+
+      GetNextToken(tokens);
+      dimensions++;
+
+      if(tokens[0].type != CBRACKET) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting ']'");
+      }
+      GetNextToken(tokens);
+   } 
+   else {
+      identifierType = IN_PARAMETER;
+      sprintf(reference,"FB:0D%d",code.GetFBOffset());
+      code.IncrementFBOffset(1);
+      n += 1;
+   }
 
    if(tokens[0].type != IDENTIFIER) {
       ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting identifier");
@@ -1194,6 +1226,38 @@ void ParseCALLStatement(TOKEN tokens[])
                      "Actual parameter data type does not match formal parameter data type");
                }
                break;
+            case REF_PARAMETER:
+               if ( identifierTable.GetDimensions(index+parameters) == 0 )
+               {
+                  ParseVariable(tokens,true,variableDatatype);
+                  if (variableDatatype != identifierTable.GetDatatype(index+parameters)) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
+                        "Actual parameter data type does not match formal parameter data type");
+                  }
+               }
+               else
+               {
+                  int index2;
+                  
+                  if ( tokens[0].type != IDENTIFIER ) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting identifier");
+                  }
+                  index2 = identifierTable.GetIndex(tokens[0].lexeme,isInTable);
+                  if ( !isInTable ) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Undefined identifier");
+                  }
+                  if ( identifierTable.GetDatatype(index2) != identifierTable.GetDatatype(index+parameters) ) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
+                        "Actual parameter data type does not match formal parameter data type");
+                  }
+                  if ( identifierTable.GetDimensions(index2) != identifierTable.GetDimensions(index+parameters) ) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
+                        "Actual array parameter dimensions does not match formal array parameter dimensions");
+                  }
+                  code.EmitFormattedLine("","PUSHA",identifierTable.GetReference(index2));
+                  GetNextToken(tokens);
+               }
+               break;
          }
          // ENDSTATICSEMANTICS
          // ENDCODEGENERATION
@@ -1662,8 +1726,43 @@ void ParsePrimary(TOKEN tokens[], DATATYPE &datatype)
                ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Undefined identifier");
             }
             //Variable Ref
+            //For array stuff
             if(identifierTable.GetType(index) != FUNCTION_SUBPROGRAMMODULE) {
-               ParseVariable(tokens, false, datatype);
+               if ( (identifierTable.GetDimensions(index) > 0) && ((tokens[1].type == LB) || (tokens[1].type == UB)) )
+               {
+                  TOKENTYPE dimensionOperator;
+                  DATATYPE dimensionDatatype;
+
+                  GetNextToken(tokens);
+                  dimensionOperator = tokens[0].type;
+                  GetNextToken(tokens);
+                  if (tokens[0].type != OPARENTHESIS) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '('");
+                  }
+                  GetNextToken(tokens);
+                  ParseExpression(tokens,dimensionDatatype);
+                  if (dimensionDatatype != INTEGERTYPE) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Dimension expression must be integer");
+                  }
+                  datatype = INTEGERTYPE;
+                  if (tokens[0].type != CPARENTHESIS) {
+                     ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting ')'");
+                  }
+                  GetNextToken(tokens);
+
+// CODEGENERATION
+                  if (dimensionOperator == LB)
+                     code.EmitFormattedLine("","GETALB",identifierTable.GetReference(index));
+                  else { // ( dimensionOperator == UB )
+                     code.EmitFormattedLine("","GETAUB",identifierTable.GetReference(index));
+                  }
+// ENDCODEGENERATION
+
+               }
+         // scalar variable or array variable element reference 
+               else {
+                  ParseVariable(tokens,false,datatype);
+               }
             }
             else {
                //Function sub_programmodule
@@ -1734,6 +1833,7 @@ void ParseVariable(TOKEN tokens[], bool asLValue, DATATYPE &datatype) {
 
    bool isInTable;
    int index;
+   int dimensions;
    IDENTIFIERTYPE identifierType;
 
    EnterModule("Variable");
@@ -1749,12 +1849,49 @@ void ParseVariable(TOKEN tokens[], bool asLValue, DATATYPE &datatype) {
    identifierType = identifierTable.GetType(index);
    datatype = identifierTable.GetDatatype(index);
 
-   if(asLValue) {
-      code.EmitFormattedLine("","PUSHA",identifierTable.GetReference(index));
+   // CODEGENERATION
+   if ( identifierTable.GetDimensions(index) == 0 )
+   {
+      if (asLValue) {
+         code.EmitFormattedLine("","PUSHA",identifierTable.GetReference(index));
+      }
+      else {
+         code.EmitFormattedLine("","PUSH",identifierTable.GetReference(index));
+      }
    }
-   else {
-      code.EmitFormattedLine("","PUSH",identifierTable.GetReference(index));
+   else
+   {
+      GetNextToken(tokens);
+      if (tokens[0].type != OBRACKET) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '['");
+      }
+      dimensions = 0;
+      DATATYPE expressionDatatype;
+
+      GetNextToken(tokens);
+      ParseExpression(tokens,expressionDatatype);
+      dimensions++;
+      if ( expressionDatatype != INTEGERTYPE ) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Index expression must be integer");
+      }
+         
+      if (identifierTable.GetDimensions(index) != dimensions) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,
+            "Number of index expressions does not match array dimensions");
+      }
+
+      if (tokens[0].type != CBRACKET) {
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting ']'");
+      }
+
+      if (asLValue) {
+         code.EmitFormattedLine("","ADRAE",identifierTable.GetReference(index));
+      }
+      else {
+         code.EmitFormattedLine("","GETAE",identifierTable.GetReference(index));
+      }
    }
+// ENDCODEGENERATION
 
    GetNextToken(tokens);
    ExitModule("Variable");
