@@ -64,6 +64,7 @@ typedef enum
    RETURN,
    UB,
    LB,
+   COLON,
 // punctuation
    COMMA,
    PERIOD,
@@ -128,10 +129,11 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { RETURN           ,".-. - .-. -."       ,true},
    { UB               ,"UB"                 ,true}, //Upperbound of arrays
    { LB               ,"LB"                 ,true},
+   { COLON            ,"---..."                  ,true},
    { OPARENTHESIS     ,"-.--."              ,true}, // Parenthesis (
    { CPARENTHESIS     ,"-.--.-"             ,true}, // Parenthesis )
-   { OBRACKET         ,"["                  ,true},
-   { CBRACKET         ,"]"                  ,true},
+   { OBRACKET         ,".--.-."                  ,true},
+   { CBRACKET         ,".--.-."                  ,true},
    { ASSIGNMENT       ,"-...-"              ,true}, //=
    { TRUE             ,"- .-. ..- ."        ,true}, // TRUE
    { FALSE            ,"..-. .- .-.. ... ." ,true}, //FALSE
@@ -373,12 +375,15 @@ void ParseMAINDefinition(TOKEN tokens[]) {
 }
 void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
    void GetNextToken(TOKEN tokens[]);
+   void ParseLBUBRange(TOKEN tokens[], int &LB, int &UB);
 
    EnterModule("DataDefinitions");
 //Equivalent to SPL "VAR"
    while( (tokens[0].type == INTDATATYPE) || (tokens[0].type == DOUBLEDATATYPE) || (tokens[0].type == STRINGDATATYPE) || (tokens[0].type == BOOLDATATYPE) || (tokens[0].type == CHARDATATYPE)) {
       
       char identifier[MAXIMUMLENGTHIDENTIFIER+1];
+      char operand[MAXIMUMLENGTHIDENTIFIER+1];
+      char comment[MAXIMUMLENGTHIDENTIFIER+1];
       char reference[MAXIMUMLENGTHIDENTIFIER+1];
       DATATYPE datatype;
       bool isInTable;
@@ -407,7 +412,7 @@ void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
          }
          strcpy(identifier,tokens[0].lexeme);
          GetNextToken(tokens);
-
+/*
          if(tokens[0].type == ASSIGNMENT) {
             char literal[MAXIMUMLENGTHIDENTIFIER+1];
 
@@ -426,13 +431,46 @@ void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
             GetNextToken(tokens);
          }
          
-
+*/
          index = identifierTable.GetIndex(identifier,isInTable);
          if ( isInTable && identifierTable.IsInCurrentScope(index) ) {
             ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Multiply-defined identifier");
          }
 
-         switch(identifierScope) {
+         dimensions = 0;
+
+         if(tokens[0].type == OBRACKET) {
+
+            LBs.clear(); UBs.clear();
+            capacity = 1;
+            /*do{
+               int LB,UB;
+               GetNextToken(tokens);
+               ParseLBUBRange(tokens,LB,UB);
+               if(LB > UB) {
+               ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"LB > UB in index range");
+               }
+               dimensions++;
+               LBs.push_back(LB); UBs.push_back(UB);
+               capacity *= (UB-LB+1);
+            } while(tokens[0].type != CBRACKET);*/
+            int LB,UB;
+            GetNextToken(tokens);
+            ParseLBUBRange(tokens,LB,UB);
+            if(LB > UB) {
+            ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"LB > UB in index range");
+            }
+            dimensions++;
+            LBs.push_back(LB); UBs.push_back(UB);
+            capacity *= (UB-LB+1);
+            if(tokens[0].type != CBRACKET) {
+               ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting ']' (Data)");
+            }
+            GetNextToken(tokens);
+         }
+         //Scalar variable
+         if(dimensions == 0) {
+            switch(identifierScope) {
             case GLOBALSCOPE:
             // CODEGENERATION
                code.AddRWToStaticData(1,identifier,reference);
@@ -450,16 +488,147 @@ void ParseDataDefinitions(TOKEN tokens[], IDENTIFIERSCOPE identifierScope) {
                code.IncrementFBOffset(1);
                identifierTable.AddToTable(identifier,SUBPROGRAMMODULE_VARIABLE,datatype,reference);
                break;
+            }
          }
+         else {
+            int base;
+
+            switch ( identifierScope )
+            {
+               case GLOBALSCOPE:
+                  sprintf(operand,"0D%d",dimensions);
+                  code.AddDWToStaticData(operand,identifier,reference);
+                  identifierTable.AddToTable(identifier,GLOBAL_VARIABLE,datatype,reference,dimensions);
+                  for (int i = 1; i <= dimensions; i++)
+                  {
+                     if ( LBs[i-1] < 0 )
+                        sprintf(operand,"-0D%d",-LBs[i-1]);
+                     else
+                        sprintf(operand,"+0D%d",+LBs[i-1]);
+                     code.AddDWToStaticData(operand,"",reference);
+                     if ( UBs[i-1] < 0 )
+                        sprintf(operand,"-0D%d",-UBs[i-1]);
+                     else
+                        sprintf(operand,"+0D%d",+UBs[i-1]);
+                     code.AddDWToStaticData(operand,"",reference);
+                  }
+                  code.AddRWToStaticData(capacity,"",reference);
+                  break;
+               case PROGRAMMODULESCOPE:
+                  sprintf(operand,"0D%d",dimensions);
+                  code.AddDWToStaticData(operand,identifier,reference);
+                  identifierTable.AddToTable(identifier,PROGRAMMODULE_VARIABLE,datatype,reference,dimensions);
+                  for (int i = 1; i <= dimensions; i++)
+                  {
+                     if ( LBs[i-1] < 0 )
+                        sprintf(operand,"-0D%d",-LBs[i-1]);
+                     else
+                        sprintf(operand,"+0D%d",+LBs[i-1]);
+                     code.AddDWToStaticData(operand,"",reference);
+                     if ( UBs[i-1] < 0 )
+                        sprintf(operand,"-0D%d",-UBs[i-1]);
+                     else
+                        sprintf(operand,"+0D%d",+UBs[i-1]);
+                     code.AddDWToStaticData(operand,"",reference);
+                  }
+                  code.AddRWToStaticData(capacity,"",reference);
+                  break;
+               case SUBPROGRAMMODULESCOPE:
+                  code.IncrementFBOffset(2*dimensions+capacity);
+                  base = code.GetFBOffset();
+                  sprintf(reference,"FB:0D%d",base-0);
+                  identifierTable.AddToTable(identifier,SUBPROGRAMMODULE_VARIABLE,datatype,reference,dimensions);
+
+                  sprintf(reference,"FB:0D%d",base-0);
+                  sprintf(operand,"#0D%d",dimensions);
+                  sprintf(comment,"initialize array %s",identifier);
+                  code.AddInstructionToInitializeFrameData("PUSH",operand,comment);
+                  code.AddInstructionToInitializeFrameData("POP",reference);
+                  for (int i = 1; i <= dimensions; i++)
+                  {
+                     if ( LBs[i-1] < 0 )
+                        sprintf(operand,"#-0D%d",-LBs[i-1]);
+                     else
+                        sprintf(operand,"#+0D%d",+LBs[i-1]);
+                     sprintf(reference,"FB:0D%d",base-(2*(i-1)+1));
+                     code.AddInstructionToInitializeFrameData("PUSH",operand);
+                     code.AddInstructionToInitializeFrameData("POP",reference);
+
+                     if ( UBs[i-1] < 0 )
+                        sprintf(operand,"#-0D%d",-UBs[i-1]);
+                     else
+                        sprintf(operand,"#+0D%d",+UBs[i-1]);
+                     sprintf(reference,"FB:0D%d",base-(2*(i-1)+2));
+                     code.AddInstructionToInitializeFrameData("PUSH",operand);
+                     code.AddInstructionToInitializeFrameData("POP",reference);
+                  }
+                  break;
+            }
+         }
+         
       } while (tokens[0].type == COMMA);
 
       if(tokens[0].type != ENDLINE) {
-         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.-'");
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '-.- Parse'");
       }
       GetNextToken(tokens);
    }
 
    ExitModule("DataDefinitions");
+}
+
+void ParseLBUBRange(TOKEN tokens[], int &LB, int &UB)
+{
+   void GetNextToken(TOKEN tokens[]);
+
+   int LBsign,UBsign;
+
+   EnterModule("LBUBRange");
+
+   if      ( tokens[0].type ==  PLUS )
+   {
+      LBsign = +1;
+      GetNextToken(tokens);
+   }
+   else if ( tokens[0].type == MINUS )
+   {
+      LBsign = -1;
+      GetNextToken(tokens);
+   }
+   else
+      LBsign = +1;
+   if (tokens[0].type != INTEGER) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting integer (ParseLBUBRange)");
+   }
+   LB = LBsign*atoi(tokens[0].lexeme);
+   GetNextToken(tokens);
+
+   if (tokens[0].type != COLON) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting ':'");
+   }
+   GetNextToken(tokens);
+
+   if ( tokens[0].type ==  PLUS )
+   {
+      UBsign = +1;
+      GetNextToken(tokens);
+   }
+   else if (tokens[0].type == MINUS)
+   {
+      UBsign = -1;
+      GetNextToken(tokens);
+   }
+   else {
+      UBsign = +1;
+   }
+
+   if (tokens[0].type != INTEGER) {
+      ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting integer");
+   }
+   UB = UBsign*atoi(tokens[0].lexeme);
+   GetNextToken(tokens);
+
+   ExitModule("LBUBRange");
 }
 //TODO: Handle Voids (NOTYPE)
 void ParseFUNCTIONDefinition(TOKEN tokens[])
