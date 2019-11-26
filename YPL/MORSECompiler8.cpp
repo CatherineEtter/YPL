@@ -132,8 +132,8 @@ const TOKENTABLERECORD TOKENTABLE[] =
    { COLON            ,"---..."                  ,true},
    { OPARENTHESIS     ,"-.--."              ,true}, // Parenthesis (
    { CPARENTHESIS     ,"-.--.-"             ,true}, // Parenthesis )
-   { OBRACKET         ,".--.-."                  ,true},
-   { CBRACKET         ,".--.-."                  ,true},
+   { OBRACKET         ,"--- -..."                  ,true},
+   { CBRACKET         ,"-.-. -..."                  ,true},
    { ASSIGNMENT       ,"-...-"              ,true}, //=
    { TRUE             ,"- .-. ..- ."        ,true}, // TRUE
    { FALSE            ,"..-. .- .-.. ... ." ,true}, //FALSE
