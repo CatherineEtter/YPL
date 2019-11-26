@@ -2032,7 +2032,7 @@ void ParseVariable(TOKEN tokens[], bool asLValue, DATATYPE &datatype) {
    {
       GetNextToken(tokens);
       if (tokens[0].type != OBRACKET) {
-         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '['");
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting '[' (Variable)");
       }
       dimensions = 0;
       DATATYPE expressionDatatype;
