@@ -1897,6 +1897,7 @@ void ParsePrimary(TOKEN tokens[], DATATYPE &datatype)
             //Variable Ref
             //For array stuff
             if(identifierTable.GetType(index) != FUNCTION_SUBPROGRAMMODULE) {
+               
                if ( (identifierTable.GetDimensions(index) > 0) && ((tokens[1].type == LB) || (tokens[1].type == UB)) )
                {
                   TOKENTYPE dimensionOperator;
