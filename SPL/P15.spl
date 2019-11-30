@@ -1,0 +1,18 @@
+;------------------------------------------------------------
+; Dr. Art Hanna
+; Problem #15
+; P15.spl
+;------------------------------------------------------------
+
+VAR xs: INT[1:3].
+
+PROCEDURE P(REF a1: INT [],REF a2: INT [,],REF a3: INT [,,])
+   VAR ps: INT[1:3,0:1,0:4].
+END
+
+PROGRAM
+   VAR ys: INT[1:3,-1:+1].
+   VAR zs: INT[1:3,0:1,0:4].
+   
+   CALL P(xs,ys,zs).
+END
