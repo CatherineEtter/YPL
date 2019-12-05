@@ -663,8 +663,11 @@ void ParseFUNCTIONDefinition(TOKEN tokens[])
       case BOOLDATATYPE:
          datatype = BOOLEANTYPE;
          break;
+      case VOIDDATATYPE:
+         datatype = NOTYPE;
+         break;
       default:
-         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting INT or BOOL");
+         ProcessCompilerError(tokens[0].sourceLineNumber,tokens[0].sourceLineIndex,"Expecting INT, BOOL, or VOID");
    }
    GetNextToken(tokens);
 
@@ -767,18 +770,31 @@ void ParseFUNCTIONDefinition(TOKEN tokens[])
    code.EmitUnformattedLine("; **** =========");
    code.ExitModuleBody();
    // ENDCODEGENERATION*/
-
-   // CODEGENERATION
-   sprintf(operand,"#0D%d",tokens[0].sourceLineNumber);
-   code.EmitFormattedLine("","PUSH",operand);
-   code.EmitFormattedLine("","PUSH","#0D3");
-   code.EmitFormattedLine("","JMP","HANDLERUNTIMEERROR");
+   if(datatype == NOTYPE) {
+      // CODEGENERATION
+   code.EmitFormattedLine("","RETURN");
+   code.EmitUnformattedLine("");
    code.EmitUnformattedLine("; **** =========");
    sprintf(line,"; **** END (%4d)",tokens[0].sourceLineNumber);
    code.EmitUnformattedLine(line);
    code.EmitUnformattedLine("; **** =========");
    code.ExitModuleBody();
-   // ENDCODEGENERATION
+// ENDCODEGENERATION
+   }
+   else {
+      // CODEGENERATION
+      sprintf(operand,"#0D%d",tokens[0].sourceLineNumber);
+      code.EmitFormattedLine("","PUSH",operand);
+      code.EmitFormattedLine("","PUSH","#0D3");
+      code.EmitFormattedLine("","JMP","HANDLERUNTIMEERROR");
+      code.EmitUnformattedLine("; **** =========");
+      sprintf(line,"; **** END (%4d)",tokens[0].sourceLineNumber);
+      code.EmitUnformattedLine(line);
+      code.EmitUnformattedLine("; **** =========");
+      code.ExitModuleBody();
+      // ENDCODEGENERATION
+   }
+   
 
    identifierTable.ExitNestedStaticScope();
 
